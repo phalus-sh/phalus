@@ -4,6 +4,8 @@
 
 No user accounts. No payments. No SaaS. You run it on your own machine with your own API keys.
 
+![PHALUS Web UI](docs/images/web-ui.png)
+
 ## Build
 
 ```sh
