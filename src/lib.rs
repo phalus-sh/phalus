@@ -12,6 +12,7 @@ pub mod manifest;
 pub mod pipeline;
 pub mod registry;
 pub mod validator;
+pub mod web;
 
 // ---------------------------------------------------------------------------
 // Ecosystem

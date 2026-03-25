@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PHALUS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --accent:    #58a6ff;
+      --accent2:   #3fb950;
+      --warn:      #d29922;
+      --danger:    #f85149;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --radius:    6px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+
+    header .tagline {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    header .badge {
+      margin-left: auto;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    main {
+      max-width: 960px;
+      margin: 32px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 700px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Cards ──────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .card h2 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    /* ── Form elements ──────────────────────────────────── */
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 140px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 12px;
+    }
+
+    select option { background: var(--surface); }
+
+    .field { margin-bottom: 14px; }
+
+    /* ── Drop zone ──────────────────────────────────────── */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 12px;
+      transition: border-color 0.15s, background 0.15s;
+      margin-bottom: 8px;
+    }
+
+    .dropzone.drag-over {
+      border-color: var(--accent);
+      background: rgba(88, 166, 255, 0.05);
+    }
+
+    .dropzone span { display: block; margin-top: 4px; font-size: 11px; }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn:not(:disabled):hover { opacity: 0.85; }
+
+    .btn-primary  { background: var(--accent);  color: #fff; }
+    .btn-success  { background: var(--accent2); color: #000; }
+    .btn-danger   { background: var(--danger);  color: #fff; }
+    .btn-ghost    { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Progress ───────────────────────────────────────── */
+    .progress-list {
+      list-style: none;
+      max-height: 220px;
+      overflow-y: auto;
+      font-size: 12px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    .progress-list li {
+      padding: 3px 0;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .progress-list li.ok   { color: var(--accent2); }
+    .progress-list li.fail { color: var(--danger);  }
+    .progress-list li.info { color: var(--accent);  }
+
+    .progress-empty {
+      color: var(--muted);
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    /* ── Results ────────────────────────────────────────── */
+    .results-placeholder {
+      color: var(--muted);
+      font-size: 12px;
+      font-style: italic;
+      padding: 12px 0;
+    }
+
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .result-item:last-child { border-bottom: none; }
+
+    .result-item .pkg { font-family: monospace; }
+
+    .badge-pass { color: var(--accent2); font-weight: 700; font-size: 11px; }
+    .badge-fail { color: var(--danger);  font-weight: 700; font-size: 11px; }
+
+    /* ── Span full width ────────────────────────────────── */
+    .span-2 { grid-column: 1 / -1; }
+
+    /* ── Status bar ─────────────────────────────────────── */
+    #status-bar {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 6px 24px;
+      font-size: 11px;
+      color: var(--muted);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+    #status-bar .dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent2);
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    #status-bar .dot.idle   { background: var(--muted); }
+    #status-bar .dot.busy   { background: var(--warn); animation: pulse 1s infinite; }
+    #status-bar .dot.error  { background: var(--danger); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.35; }
+    }
+
+    /* bottom spacing so content not hidden by status bar */
+    body { padding-bottom: 40px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────── -->
+<header>
+  <span class="logo">PHALUS</span>
+  <span class="tagline">Private Headless Automated License Uncoupling System</span>
+  <span class="badge" id="health-badge">checking…</span>
+</header>
+
+<!-- ── Main grid ───────────────────────────────────────────── -->
+<main>
+
+  <!-- Input card -->
+  <div class="card">
+    <h2>Manifest Input</h2>
+
+    <div id="dropzone" class="dropzone" role="button" tabindex="0"
+         aria-label="Drop manifest file here or click to browse">
+      Drop manifest file here
+      <span>package.json · requirements.txt · Cargo.toml · go.mod</span>
+    </div>
+    <input type="file" id="file-input" style="display:none"
+           accept=".json,.txt,.toml,.mod,.lock" />
+
+    <div class="field">
+      <label for="manifest-text">… or paste manifest content</label>
+      <textarea id="manifest-text" placeholder='{ "dependencies": { "lodash": "^4.17.21" } }'></textarea>
+    </div>
+
+    <button class="btn btn-ghost" id="parse-btn" style="width:100%">Parse Manifest</button>
+
+    <div id="parse-result" style="margin-top:10px; font-size:12px; color:var(--muted);"></div>
+  </div>
+
+  <!-- Options card -->
+  <div class="card">
+    <h2>Run Options</h2>
+
+    <div class="field">
+      <label for="run-one-input">Single package (ecosystem/name@version)</label>
+      <input id="run-one-input" type="text" placeholder="npm/lodash@4.17.21" />
+    </div>
+
+    <div class="field">
+      <label for="license-select">Output license</label>
+      <select id="license-select">
+        <option value="mit">MIT</option>
+        <option value="apache-2.0">Apache 2.0</option>
+        <option value="bsd-2">BSD 2-Clause</option>
+        <option value="bsd-3">BSD 3-Clause</option>
+        <option value="isc">ISC</option>
+        <option value="unlicense">Unlicense</option>
+        <option value="cc0">CC0</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="target-lang-select">Target language</label>
+      <select id="target-lang-select">
+        <option value="same">Same as source</option>
+        <option value="rust">Rust</option>
+        <option value="go">Go</option>
+        <option value="python">Python</option>
+        <option value="typescript">TypeScript</option>
+      </select>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-success" id="start-btn">&#9654; Start</button>
+      <button class="btn btn-danger"  id="stop-btn" disabled>&#9632; Stop</button>
+      <button class="btn btn-ghost"   id="clear-btn">Clear</button>
+    </div>
+  </div>
+
+  <!-- Progress card -->
+  <div class="card">
+    <h2>Progress</h2>
+    <p class="progress-empty" id="progress-empty">No job running. Start a job to see progress here.</p>
+    <ul class="progress-list" id="progress-list" style="display:none"></ul>
+  </div>
+
+  <!-- Results card -->
+  <div class="card">
+    <h2>Results</h2>
+    <p class="results-placeholder" id="results-empty">Results will appear here after a job completes.</p>
+    <div id="results-list"></div>
+  </div>
+
+</main>
+
+<!-- ── Status bar ──────────────────────────────────────────── -->
+<div id="status-bar">
+  <span class="dot idle" id="status-dot"></span>
+  <span id="status-text">Idle — connect PHALUS to an LLM provider to run jobs</span>
+</div>
+
+<script>
+  "use strict";
+
+  // ── Health check ────────────────────────────────────────────
+  async function checkHealth() {
+    try {
+      const r = await fetch("/api/health");
+      if (r.ok) {
+        document.getElementById("health-badge").textContent = "API ok";
+        document.getElementById("health-badge").style.color = "var(--accent2)";
+      } else {
+        throw new Error("non-ok");
+      }
+    } catch {
+      document.getElementById("health-badge").textContent = "API unreachable";
+      document.getElementById("health-badge").style.color = "var(--danger)";
+    }
+  }
+  checkHealth();
+
+  // ── Drop zone ────────────────────────────────────────────────
+  const dropzone  = document.getElementById("dropzone");
+  const fileInput = document.getElementById("file-input");
+  const textArea  = document.getElementById("manifest-text");
+
+  dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") fileInput.click(); });
+
+  dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("drag-over"); });
+  dropzone.addEventListener("dragleave",  () => dropzone.classList.remove("drag-over"));
+  dropzone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropzone.classList.remove("drag-over");
+    const file = e.dataTransfer.files[0];
+    if (file) readFile(file);
+  });
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) readFile(fileInput.files[0]);
+  });
+
+  function readFile(file) {
+    const reader = new FileReader();
+    reader.onload = ev => { textArea.value = ev.target.result; };
+    reader.readAsText(file);
+    dropzone.textContent = file.name;
+  }
+
+  // ── Parse manifest ───────────────────────────────────────────
+  document.getElementById("parse-btn").addEventListener("click", async () => {
+    const body = textArea.value.trim();
+    if (!body) { setParseResult("Paste or drop a manifest first.", "warn"); return; }
+    try {
+      const r = await fetch("/api/manifest/parse", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body,
+      });
+      const json = await r.json();
+      setParseResult("Server response: " + JSON.stringify(json), "ok");
+    } catch (err) {
+      setParseResult("Error: " + err.message, "fail");
+    }
+  });
+
+  function setParseResult(msg, kind) {
+    const el = document.getElementById("parse-result");
+    el.textContent = msg;
+    el.style.color = kind === "ok" ? "var(--accent2)" : kind === "fail" ? "var(--danger)" : "var(--warn)";
+  }
+
+  // ── Progress helpers ─────────────────────────────────────────
+  let jobRunning = false;
+  let eventSource = null;
+
+  function addProgress(msg, kind) {
+    const list = document.getElementById("progress-list");
+    const empty = document.getElementById("progress-empty");
+    empty.style.display = "none";
+    list.style.display  = "";
+    const li = document.createElement("li");
+    li.textContent = msg;
+    if (kind) li.className = kind;
+    list.appendChild(li);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function clearProgress() {
+    const list  = document.getElementById("progress-list");
+    const empty = document.getElementById("progress-empty");
+    list.innerHTML   = "";
+    list.style.display  = "none";
+    empty.style.display = "";
+  }
+
+  function clearResults() {
+    document.getElementById("results-list").innerHTML = "";
+    document.getElementById("results-empty").style.display = "";
+  }
+
+  function addResult(pkg, version, pass, err) {
+    document.getElementById("results-empty").style.display = "none";
+    const div = document.createElement("div");
+    div.className = "result-item";
+    const badge = pass
+      ? '<span class="badge-pass">PASS</span>'
+      : '<span class="badge-fail">FAIL</span>';
+    div.innerHTML = `<span class="pkg">${pkg}@${version}</span>${badge}`;
+    if (err) {
+      const note = document.createElement("div");
+      note.style.cssText = "font-size:11px;color:var(--danger);padding-bottom:4px;";
+      note.textContent = err;
+      document.getElementById("results-list").appendChild(div);
+      document.getElementById("results-list").appendChild(note);
+    } else {
+      document.getElementById("results-list").appendChild(div);
+    }
+  }
+
+  // ── Status helpers ───────────────────────────────────────────
+  function setStatus(msg, kind) {
+    document.getElementById("status-text").textContent = msg;
+    const dot = document.getElementById("status-dot");
+    dot.className = "dot " + (kind || "idle");
+  }
+
+  // ── Start / Stop ─────────────────────────────────────────────
+  document.getElementById("start-btn").addEventListener("click", startJob);
+  document.getElementById("stop-btn").addEventListener("click",  stopJob);
+
+  function startJob() {
+    const runOne = document.getElementById("run-one-input").value.trim();
+    if (!runOne && !textArea.value.trim()) {
+      setStatus("Provide a package spec or manifest before starting.", "error");
+      return;
+    }
+
+    clearProgress();
+    jobRunning = true;
+    document.getElementById("start-btn").disabled = true;
+    document.getElementById("stop-btn").disabled  = false;
+    setStatus("Job running…", "busy");
+
+    if (runOne) {
+      addProgress("→ run-one: " + runOne, "info");
+    } else {
+      addProgress("→ Manifest mode (not yet wired to backend)", "info");
+    }
+
+    // SSE placeholder — real endpoint not implemented yet
+    addProgress("SSE endpoint /api/events not yet implemented.", "");
+    addProgress("Wire up the backend to stream ProgressEvents here.", "");
+
+    // Simulate finish after short delay for demo purposes
+    setTimeout(() => {
+      addProgress("Job finished (demo placeholder).", "ok");
+      setStatus("Idle — last job completed.", "idle");
+      jobRunning = false;
+      document.getElementById("start-btn").disabled = false;
+      document.getElementById("stop-btn").disabled  = true;
+    }, 1500);
+  }
+
+  function stopJob() {
+    if (eventSource) { eventSource.close(); eventSource = null; }
+    jobRunning = false;
+    document.getElementById("start-btn").disabled = false;
+    document.getElementById("stop-btn").disabled  = true;
+    addProgress("Job stopped by user.", "fail");
+    setStatus("Idle — job stopped.", "idle");
+  }
+
+  // ── Clear ─────────────────────────────────────────────────────
+  document.getElementById("clear-btn").addEventListener("click", () => {
+    textArea.value = "";
+    document.getElementById("run-one-input").value = "";
+    document.getElementById("parse-result").textContent = "";
+    dropzone.innerHTML = 'Drop manifest file here<span>package.json · requirements.txt · Cargo.toml · go.mod</span>';
+    clearProgress();
+    clearResults();
+    setStatus("Idle", "idle");
+  });
+</script>
+</body>
+</html>
