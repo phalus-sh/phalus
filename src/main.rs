@@ -11,14 +11,10 @@ use tokio::task::JoinSet;
 use phalus::audit::{AuditEvent, AuditLogger};
 use phalus::config::PhalusConfig;
 use phalus::manifest;
-use phalus::pipeline::{
-    filter_packages, run_package, PipelineConfig,
-};
+use phalus::pipeline::{filter_packages, run_package, PipelineConfig};
 use phalus::validator::license_check;
 use phalus::validator::similarity;
-use phalus::{
-    Ecosystem, PackageRef, ValidationReport, Verdict,
-};
+use phalus::{Ecosystem, PackageRef, ValidationReport, Verdict};
 
 #[derive(Parser)]
 #[command(
@@ -143,11 +139,7 @@ async fn cmd_plan(
 ) -> Result<()> {
     let parsed = manifest::parse_manifest(&manifest_path)?;
 
-    let packages = filter_packages(
-        &parsed.packages,
-        only.as_deref(),
-        exclude.as_deref(),
-    );
+    let packages = filter_packages(&parsed.packages, only.as_deref(), exclude.as_deref());
 
     println!(
         "Manifest: {} ({} packages, {} after filtering)",
@@ -182,11 +174,7 @@ async fn cmd_run(
     let manifest_content = std::fs::read(&manifest_path)?;
     let manifest_hash = format!("{:x}", Sha256::digest(&manifest_content));
 
-    let packages = filter_packages(
-        &parsed.packages,
-        only.as_deref(),
-        exclude.as_deref(),
-    );
+    let packages = filter_packages(&parsed.packages, only.as_deref(), exclude.as_deref());
 
     println!(
         "Processing {} packages (concurrency: {})",
@@ -231,10 +219,7 @@ async fn cmd_run(
         match result {
             Ok(pkg_result) => {
                 let status = if pkg_result.success { "OK" } else { "FAIL" };
-                println!(
-                    "  {} {}@{}",
-                    status, pkg_result.name, pkg_result.version
-                );
+                println!("  {} {}@{}", status, pkg_result.name, pkg_result.version);
                 if let Some(err) = &pkg_result.error {
                     tracing::error!("    Error: {}", err);
                 }
@@ -274,10 +259,7 @@ async fn cmd_run(
     Ok(())
 }
 
-async fn cmd_run_one(
-    package_spec: String,
-    config: PipelineConfig,
-) -> Result<()> {
+async fn cmd_run_one(package_spec: String, config: PipelineConfig) -> Result<()> {
     let app_config = PhalusConfig::with_env_overrides(PhalusConfig::load()?);
 
     let (ecosystem, name, version) = parse_package_spec(&package_spec)?;
@@ -395,9 +377,7 @@ async fn cmd_inspect(
                         let manifest_path = csp_dir.join("manifest.json");
                         if manifest_path.exists() {
                             let content = std::fs::read_to_string(&manifest_path)?;
-                            if let Ok(csp) =
-                                serde_json::from_str::<phalus::CspSpec>(&content)
-                            {
+                            if let Ok(csp) = serde_json::from_str::<phalus::CspSpec>(&content) {
                                 println!(
                                     "  {}@{} ({} documents)",
                                     csp.package_name,
@@ -444,13 +424,7 @@ async fn cmd_validate(output_dir: PathBuf, similarity_threshold: f64) -> Result<
             let license_ok = license_check::check_license_file(&files);
             let all_code: String = files.values().cloned().collect();
 
-            let sim = similarity::compute_similarity(
-                "",
-                &all_code,
-                &[],
-                &[],
-                similarity_threshold,
-            );
+            let sim = similarity::compute_similarity("", &all_code, &[], &[], similarity_threshold);
 
             let pass = sim.overall_score <= similarity_threshold && license_ok;
             let status = if pass { "PASS" } else { "FAIL" };
@@ -604,8 +578,6 @@ async fn main() -> Result<()> {
 
         Commands::Config => cmd_config(),
 
-        Commands::Serve { host, port } => {
-            phalus::web::start_server(&host, port).await
-        }
+        Commands::Serve { host, port } => phalus::web::start_server(&host, port).await,
     }
 }

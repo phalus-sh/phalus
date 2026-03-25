@@ -88,12 +88,13 @@ pub struct AuditLogger {
 
 impl AuditLogger {
     pub fn new(path: PathBuf) -> Result<Self, AuditError> {
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)?;
+        let file = OpenOptions::new().create(true).append(true).open(&path)?;
         let writer = BufWriter::new(file);
-        Ok(Self { path, writer, seq: 0 })
+        Ok(Self {
+            path,
+            writer,
+            seq: 0,
+        })
     }
 
     pub fn log(&mut self, event: AuditEvent) -> Result<(), AuditError> {
@@ -128,10 +129,12 @@ mod tests {
     fn test_log_event_writes_jsonl() {
         let file = NamedTempFile::new().unwrap();
         let mut logger = AuditLogger::new(file.path().to_path_buf()).unwrap();
-        logger.log(AuditEvent::ManifestParsed {
-            manifest_hash: "abc123".into(),
-            package_count: 3,
-        }).unwrap();
+        logger
+            .log(AuditEvent::ManifestParsed {
+                manifest_hash: "abc123".into(),
+                package_count: 3,
+            })
+            .unwrap();
 
         let content = std::fs::read_to_string(file.path()).unwrap();
         let entry: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
@@ -145,8 +148,18 @@ mod tests {
     fn test_sequence_numbers_increment() {
         let file = NamedTempFile::new().unwrap();
         let mut logger = AuditLogger::new(file.path().to_path_buf()).unwrap();
-        logger.log(AuditEvent::ManifestParsed { manifest_hash: "a".into(), package_count: 1 }).unwrap();
-        logger.log(AuditEvent::ManifestParsed { manifest_hash: "b".into(), package_count: 2 }).unwrap();
+        logger
+            .log(AuditEvent::ManifestParsed {
+                manifest_hash: "a".into(),
+                package_count: 1,
+            })
+            .unwrap();
+        logger
+            .log(AuditEvent::ManifestParsed {
+                manifest_hash: "b".into(),
+                package_count: 2,
+            })
+            .unwrap();
 
         let content = std::fs::read_to_string(file.path()).unwrap();
         let lines: Vec<&str> = content.trim().lines().collect();
@@ -161,7 +174,12 @@ mod tests {
     fn test_finalize_produces_hash() {
         let file = NamedTempFile::new().unwrap();
         let mut logger = AuditLogger::new(file.path().to_path_buf()).unwrap();
-        logger.log(AuditEvent::ManifestParsed { manifest_hash: "abc".into(), package_count: 1 }).unwrap();
+        logger
+            .log(AuditEvent::ManifestParsed {
+                manifest_hash: "abc".into(),
+                package_count: 1,
+            })
+            .unwrap();
         let hash = logger.finalize().unwrap();
         assert!(!hash.is_empty());
         assert_eq!(hash.len(), 64); // SHA-256 hex

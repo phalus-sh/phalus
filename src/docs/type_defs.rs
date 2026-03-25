@@ -15,10 +15,7 @@ pub fn filter_type_definitions(entries: &[(String, String)]) -> Vec<(String, Str
 
 /// Convert filtered `.d.ts` entries into `DocEntry` values, computing SHA-256
 /// hashes and attaching the provided `source_url`.
-pub fn type_defs_to_doc_entries(
-    filtered: &[(String, String)],
-    source_url: &str,
-) -> Vec<DocEntry> {
+pub fn type_defs_to_doc_entries(filtered: &[(String, String)], source_url: &str) -> Vec<DocEntry> {
     filtered
         .iter()
         .map(|(name, content)| {
@@ -43,7 +40,10 @@ mod tests {
     fn test_filter_dts_from_tarball_entries() {
         let entries = vec![
             ("package/index.js".into(), "source code".into()),
-            ("package/index.d.ts".into(), "declare function foo(): void;".into()),
+            (
+                "package/index.d.ts".into(),
+                "declare function foo(): void;".into(),
+            ),
             ("package/lib/types.d.ts".into(), "interface Bar {}".into()),
             ("package/test/helper.js".into(), "test code".into()),
         ];

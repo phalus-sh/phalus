@@ -19,21 +19,11 @@ pub async fn run_generated_tests(language: &str, pkg_dir: &Path) -> Option<TestR
     let (cmd, args) = match language {
         "javascript" | "js" | "npm" => (
             "npx",
-            vec![
-                "--yes",
-                "jest",
-                "--passWithNoTests",
-                "--no-coverage",
-            ],
+            vec!["--yes", "jest", "--passWithNoTests", "--no-coverage"],
         ),
         "typescript" | "ts" => (
             "npx",
-            vec![
-                "--yes",
-                "jest",
-                "--passWithNoTests",
-                "--no-coverage",
-            ],
+            vec!["--yes", "jest", "--passWithNoTests", "--no-coverage"],
         ),
         "rust" => ("cargo", vec!["test", "-j2", "--no-fail-fast"]),
         "python" | "py" | "pypi" => ("python", vec!["-m", "pytest", "-v"]),

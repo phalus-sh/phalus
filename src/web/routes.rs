@@ -85,10 +85,7 @@ fn try_parse_manifest(body: &str) -> Option<ParsedManifest> {
     None
 }
 
-async fn parse_manifest(
-    State(_state): State<Arc<AppState>>,
-    body: String,
-) -> impl IntoResponse {
+async fn parse_manifest(State(_state): State<Arc<AppState>>, body: String) -> impl IntoResponse {
     match try_parse_manifest(&body) {
         Some(manifest) => Json(serde_json::to_value(&manifest).unwrap()).into_response(),
         None => (
@@ -152,9 +149,17 @@ async fn create_job(
     // Spawn background task to process packages via the real pipeline
     let state_jobs = Arc::clone(&state) as Arc<AppState>;
     tokio::spawn(async move {
-        tracing::info!("Job {} starting with {} packages", job_id_clone, parsed.packages.len());
+        tracing::info!(
+            "Job {} starting with {} packages",
+            job_id_clone,
+            parsed.packages.len()
+        );
         let app_config = PhalusConfig::with_env_overrides(PhalusConfig::load().unwrap_or_default());
-        tracing::info!("Job {} config loaded, agent_a_key set: {}", job_id_clone, !app_config.llm.agent_a_api_key.is_empty());
+        tracing::info!(
+            "Job {} config loaded, agent_a_key set: {}",
+            job_id_clone,
+            !app_config.llm.agent_a_api_key.is_empty()
+        );
 
         let pipeline_config = PipelineConfig {
             license,
@@ -191,18 +196,19 @@ async fn create_job(
 
         let failed = results
             .iter()
-            .filter(|r| {
-                !r.get("success")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(true)
-            })
+            .filter(|r| !r.get("success").and_then(|v| v.as_bool()).unwrap_or(true))
             .count();
         let _ = tx.send(ProgressEvent::JobDone {
             total: results.len(),
             failed,
         });
 
-        tracing::info!("Job {} completed: {} processed, {} failed", job_id_clone, results.len(), failed);
+        tracing::info!(
+            "Job {} completed: {} processed, {} failed",
+            job_id_clone,
+            results.len(),
+            failed
+        );
 
         // Update job state
         let mut jobs = state_jobs.jobs.lock().await;

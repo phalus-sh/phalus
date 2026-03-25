@@ -33,10 +33,7 @@ impl GitHubFetcher {
             ACCEPT,
             HeaderValue::from_static("application/vnd.github+json"),
         );
-        headers.insert(
-            USER_AGENT,
-            HeaderValue::from_static("phalus/0.1"),
-        );
+        headers.insert(USER_AGENT, HeaderValue::from_static("phalus/0.1"));
         if let Some(t) = token {
             if let Ok(val) = HeaderValue::from_str(&format!("Bearer {}", t)) {
                 headers.insert(AUTHORIZATION, val);
@@ -64,10 +61,7 @@ impl GitHubFetcher {
         let response = response.error_for_status()?;
         let json: serde_json::Value = response.json().await?;
 
-        let name = json["name"]
-            .as_str()
-            .unwrap_or("README.md")
-            .to_string();
+        let name = json["name"].as_str().unwrap_or("README.md").to_string();
 
         // Check source guard on the file name
         if source_guard::is_source_code(&name) {
@@ -91,8 +85,7 @@ impl GitHubFetcher {
         let bytes = base64::engine::general_purpose::STANDARD
             .decode(&raw_clean)
             .map_err(|e| DocFetchError::Decode(e.to_string()))?;
-        let content = String::from_utf8(bytes)
-            .map_err(|e| DocFetchError::Decode(e.to_string()))?;
+        let content = String::from_utf8(bytes).map_err(|e| DocFetchError::Decode(e.to_string()))?;
 
         let mut hasher = Sha256::new();
         hasher.update(content.as_bytes());
@@ -142,7 +135,8 @@ mod tests {
     #[tokio::test]
     async fn test_fetch_readme() {
         let mock_server = MockServer::start().await;
-        let readme_content = base64::engine::general_purpose::STANDARD.encode("# Hello\nThis is a readme");
+        let readme_content =
+            base64::engine::general_purpose::STANDARD.encode("# Hello\nThis is a readme");
         Mock::given(method("GET"))
             .and(path("/repos/lodash/lodash/readme"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({

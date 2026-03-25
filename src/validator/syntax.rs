@@ -9,7 +9,10 @@ pub fn syntax_check_command(language: &str) -> Option<(&'static str, Vec<&'stati
     }
 }
 
-pub async fn run_syntax_check(language: &str, dir: &std::path::Path) -> Result<bool, std::io::Error> {
+pub async fn run_syntax_check(
+    language: &str,
+    dir: &std::path::Path,
+) -> Result<bool, std::io::Error> {
     let Some((cmd, args)) = syntax_check_command(language) else {
         return Ok(true);
     };

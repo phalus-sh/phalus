@@ -1,5 +1,5 @@
-use crate::{Ecosystem, PackageRef, ParsedManifest};
 use super::ManifestError;
+use crate::{Ecosystem, PackageRef, ParsedManifest};
 use std::path::Path;
 
 pub struct PypiParser;
@@ -24,11 +24,7 @@ impl PypiParser {
             }
 
             // Strip inline comments.
-            let dep = trimmed
-                .split('#')
-                .next()
-                .unwrap_or(trimmed)
-                .trim();
+            let dep = trimmed.split('#').next().unwrap_or(trimmed).trim();
 
             if dep.is_empty() {
                 continue;

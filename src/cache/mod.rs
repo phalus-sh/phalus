@@ -31,7 +31,8 @@ impl CspCache {
     }
 
     fn cache_path(&self, name: &str, version: &str, content_hash: &str) -> PathBuf {
-        self.dir.join(format!("{name}@{version}-{content_hash}.json"))
+        self.dir
+            .join(format!("{name}@{version}-{content_hash}.json"))
     }
 
     pub fn get(&self, name: &str, version: &str, content_hash: &str) -> Option<CspSpec> {

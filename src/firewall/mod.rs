@@ -56,7 +56,10 @@ async fn cross_firewall_process(csp: CspSpec) -> (CspSpec, AuditEvent) {
 
     let (checksums, doc_names) = compute_checksums(&deserialized);
     let event = AuditEvent::FirewallCrossing {
-        package: format!("{}@{}", deserialized.package_name, deserialized.package_version),
+        package: format!(
+            "{}@{}",
+            deserialized.package_name, deserialized.package_version
+        ),
         documents_transferred: doc_names,
         sha256_checksums: checksums,
         isolation_mode: "process".to_string(),
@@ -103,12 +106,14 @@ async fn cross_firewall_container(csp: CspSpec) -> (CspSpec, AuditEvent) {
     if docker_available {
         tracing::info!(
             "Container isolation active for {}@{} — CSP written to isolated mount point",
-            csp.package_name, csp.package_version
+            csp.package_name,
+            csp.package_version
         );
     } else {
         tracing::warn!(
             "Docker not available for {}@{} — using process-level serialization boundary",
-            csp.package_name, csp.package_version
+            csp.package_name,
+            csp.package_version
         );
     }
 
@@ -151,8 +156,8 @@ fn compute_checksums(csp: &CspSpec) -> (HashMap<String, String>, Vec<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CspDocument, CspSpec};
     use crate::audit::AuditEvent;
+    use crate::{CspDocument, CspSpec};
     use chrono::Utc;
 
     fn sample_csp() -> CspSpec {
@@ -202,7 +207,10 @@ mod tests {
     async fn test_checksums_are_sha256() {
         let csp = sample_csp();
         let (_, event) = cross_firewall(csp, "context").await;
-        if let AuditEvent::FirewallCrossing { sha256_checksums, .. } = event {
+        if let AuditEvent::FirewallCrossing {
+            sha256_checksums, ..
+        } = event
+        {
             for hash in sha256_checksums.values() {
                 assert_eq!(hash.len(), 64);
             }

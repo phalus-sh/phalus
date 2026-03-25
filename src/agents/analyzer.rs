@@ -50,8 +50,9 @@ pub fn parse_csp_response(
 
     // Try to extract a valid JSON object from the response.
     // The LLM may wrap it in markdown fences or prose text.
-    let obj = extract_json_object(trimmed)
-        .ok_or_else(|| AnalyzerError::ParseError("could not find valid JSON object in response".into()))?;
+    let obj = extract_json_object(trimmed).ok_or_else(|| {
+        AnalyzerError::ParseError("could not find valid JSON object in response".into())
+    })?;
 
     let mut documents = Vec::new();
     for key in CSP_KEYS {

@@ -255,7 +255,9 @@ impl PhalusConfig {
                 "validation" => apply_validation_override(&mut config.validation, &field, &value),
                 "output" => apply_output_override(&mut config.output, &field, &value),
                 "web" => apply_web_override(&mut config.web, &field, &value),
-                "doc_fetcher" => apply_doc_fetcher_override(&mut config.doc_fetcher, &field, &value),
+                "doc_fetcher" => {
+                    apply_doc_fetcher_override(&mut config.doc_fetcher, &field, &value)
+                }
                 _ => {}
             }
         }
@@ -401,13 +403,17 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
         let mut f = std::fs::File::create(&path).unwrap();
-        writeln!(f, r#"
+        writeln!(
+            f,
+            r#"
 [llm]
 agent_a_model = "gpt-4"
 
 [limits]
 max_packages_per_job = 10
-"#).unwrap();
+"#
+        )
+        .unwrap();
 
         let config = PhalusConfig::load_from_file(&path).unwrap();
         assert_eq!(config.llm.agent_a_model, "gpt-4");
@@ -417,9 +423,13 @@ max_packages_per_job = 10
 
     #[test]
     fn test_env_override() {
-        unsafe { std::env::set_var("PHALUS_LLM__AGENT_A_MODEL", "test-model"); }
+        unsafe {
+            std::env::set_var("PHALUS_LLM__AGENT_A_MODEL", "test-model");
+        }
         let config = PhalusConfig::with_env_overrides(PhalusConfig::default());
         assert_eq!(config.llm.agent_a_model, "test-model");
-        unsafe { std::env::remove_var("PHALUS_LLM__AGENT_A_MODEL"); }
+        unsafe {
+            std::env::remove_var("PHALUS_LLM__AGENT_A_MODEL");
+        }
     }
 }

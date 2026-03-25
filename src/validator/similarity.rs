@@ -85,7 +85,10 @@ mod tests {
 
     #[test]
     fn test_token_jaccard_identical() {
-        let score = token_jaccard("function add(a, b) { return a + b; }", "function add(a, b) { return a + b; }");
+        let score = token_jaccard(
+            "function add(a, b) { return a + b; }",
+            "function add(a, b) { return a + b; }",
+        );
         assert!((score - 1.0).abs() < 0.001);
     }
 
@@ -121,7 +124,13 @@ mod tests {
 
     #[test]
     fn test_overall_score() {
-        let report = compute_similarity("function add(a, b) { return a + b; }", "function add(x, y) { return x + y; }", &["add".into()], &["add".into()], 0.70);
+        let report = compute_similarity(
+            "function add(a, b) { return a + b; }",
+            "function add(x, y) { return x + y; }",
+            &["add".into()],
+            &["add".into()],
+            0.70,
+        );
         assert!(report.overall_score < 0.70);
     }
 }

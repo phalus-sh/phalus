@@ -25,8 +25,8 @@ use crate::validator::license_check;
 use crate::validator::similarity;
 use crate::validator::syntax::run_syntax_check;
 use crate::{
-    CspSpec, Documentation, Ecosystem, Implementation, PackageMetadata, PackageRef,
-    TargetLanguage, ValidationReport, Verdict,
+    CspSpec, Documentation, Ecosystem, Implementation, PackageMetadata, PackageRef, TargetLanguage,
+    ValidationReport, Verdict,
 };
 
 // ---------------------------------------------------------------------------
@@ -208,10 +208,7 @@ pub fn resolve_target_lang(target_lang: &Option<String>) -> TargetLanguage {
 // Helper: emit progress event
 // ---------------------------------------------------------------------------
 
-pub fn emit_progress(
-    tx: &Option<broadcast::Sender<ProgressEvent>>,
-    event: ProgressEvent,
-) {
+pub fn emit_progress(tx: &Option<broadcast::Sender<ProgressEvent>>, event: ProgressEvent) {
     if let Some(tx) = tx {
         let _ = tx.send(event);
     }
@@ -233,9 +230,10 @@ pub async fn run_package(
 
     tracing::info!("[{}] Starting pipeline...", name);
 
-    emit_progress(&progress_tx, ProgressEvent::PackageStarted {
-        name: name.clone(),
-    });
+    emit_progress(
+        &progress_tx,
+        ProgressEvent::PackageStarted { name: name.clone() },
+    );
 
     // 1. Resolve metadata via registry
     let metadata = match resolve_metadata(pkg).await {
@@ -253,13 +251,18 @@ pub async fn run_package(
 
     tracing::info!(
         "[{}] Resolved: {} v{}",
-        name, metadata.name, metadata.version
+        name,
+        metadata.name,
+        metadata.version
     );
 
-    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
-        name: name.clone(),
-        phase: "resolve".to_string(),
-    });
+    emit_progress(
+        &progress_tx,
+        ProgressEvent::PhaseDone {
+            name: name.clone(),
+            phase: "resolve".to_string(),
+        },
+    );
 
     // 2. Fetch documentation
     let docs = match fetch_docs(&metadata, app_config).await {
@@ -295,10 +298,13 @@ pub async fn run_package(
         }
     };
 
-    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
-        name: name.clone(),
-        phase: "docs".to_string(),
-    });
+    emit_progress(
+        &progress_tx,
+        ProgressEvent::PhaseDone {
+            name: name.clone(),
+            phase: "docs".to_string(),
+        },
+    );
 
     // 3. Check CSP cache or run Agent A
     let cache = CspCache::default_cache();
@@ -323,12 +329,7 @@ pub async fn run_package(
             match run_agent_a(&docs, &metadata, app_config, &audit).await {
                 Ok(spec) => {
                     // Store in cache
-                    let _ = cache.put(
-                        &metadata.name,
-                        &metadata.version,
-                        &docs.content_hash,
-                        &spec,
-                    );
+                    let _ = cache.put(&metadata.name, &metadata.version, &docs.content_hash, &spec);
                     spec
                 }
                 Err(e) => {
@@ -344,10 +345,13 @@ pub async fn run_package(
         }
     };
 
-    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
-        name: name.clone(),
-        phase: "analyze".to_string(),
-    });
+    emit_progress(
+        &progress_tx,
+        ProgressEvent::PhaseDone {
+            name: name.clone(),
+            phase: "analyze".to_string(),
+        },
+    );
 
     // 4. Firewall crossing
     let (csp, fw_event) = firewall::cross_firewall(csp, &config.isolation_mode).await;
@@ -360,10 +364,13 @@ pub async fn run_package(
         tracing::warn!("[{}] failed to write CSP: {}", name, e);
     }
 
-    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
-        name: name.clone(),
-        phase: "firewall".to_string(),
-    });
+    emit_progress(
+        &progress_tx,
+        ProgressEvent::PhaseDone {
+            name: name.clone(),
+            phase: "firewall".to_string(),
+        },
+    );
 
     // 5. Run Agent B (skip if dry_run)
     if config.dry_run {
@@ -406,10 +413,13 @@ pub async fn run_package(
         };
     }
 
-    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
-        name: name.clone(),
-        phase: "build".to_string(),
-    });
+    emit_progress(
+        &progress_tx,
+        ProgressEvent::PhaseDone {
+            name: name.clone(),
+            phase: "build".to_string(),
+        },
+    );
 
     // 6b. Run generated tests if configured
     let (tests_passed, tests_failed) = if app_config.validation.run_tests {
@@ -454,13 +464,8 @@ pub async fn run_package(
         })
         .all(|(_, content)| license_check::check_license_header(content, &config.license));
     let license_ok = license_check::check_license_file(&implementation.files) && header_ok;
-    let sim = similarity::compute_similarity(
-        "",
-        &generated_code,
-        &[],
-        &[],
-        config.similarity_threshold,
-    );
+    let sim =
+        similarity::compute_similarity("", &generated_code, &[], &[], config.similarity_threshold);
 
     // Syntax check (skip gracefully if the check tool isn't installed)
     let syntax_ok = run_syntax_check(
@@ -522,16 +527,22 @@ pub async fn run_package(
         tracing::error!("audit log failure: {}", e);
     }
 
-    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
-        name: name.clone(),
-        phase: "validate".to_string(),
-    });
+    emit_progress(
+        &progress_tx,
+        ProgressEvent::PhaseDone {
+            name: name.clone(),
+            phase: "validate".to_string(),
+        },
+    );
 
     let success = matches!(validation.verdict, Verdict::Pass);
-    emit_progress(&progress_tx, ProgressEvent::PackageDone {
-        name: name.clone(),
-        success,
-    });
+    emit_progress(
+        &progress_tx,
+        ProgressEvent::PackageDone {
+            name: name.clone(),
+            success,
+        },
+    );
 
     PackageResult {
         name,
@@ -571,7 +582,10 @@ pub async fn resolve_metadata(pkg: &PackageRef) -> Result<PackageMetadata> {
 // Helper: fetch docs
 // ---------------------------------------------------------------------------
 
-pub async fn fetch_docs(metadata: &PackageMetadata, config: &PhalusConfig) -> Result<Documentation> {
+pub async fn fetch_docs(
+    metadata: &PackageMetadata,
+    config: &PhalusConfig,
+) -> Result<Documentation> {
     let token = if config.doc_fetcher.github_token.is_empty() {
         None
     } else {
@@ -587,17 +601,12 @@ pub async fn fetch_docs(metadata: &PackageMetadata, config: &PhalusConfig) -> Re
         if let Some((owner, repo)) = GitHubFetcher::parse_github_url(repo_url) {
             match fetcher.fetch_readme(&owner, &repo).await {
                 Ok(mut doc) => {
-                    doc.content = docs_site::strip_long_code_examples(
-                        &doc.content,
-                        max_code_example_lines,
-                    );
+                    doc.content =
+                        docs_site::strip_long_code_examples(&doc.content, max_code_example_lines);
                     documents.push(doc);
                 }
                 Err(e) => {
-                    tracing::warn!(
-                        "[{}] could not fetch README: {}",
-                        metadata.name, e
-                    );
+                    tracing::warn!("[{}] could not fetch README: {}", metadata.name, e);
                 }
             }
         }
@@ -609,10 +618,7 @@ pub async fn fetch_docs(metadata: &PackageMetadata, config: &PhalusConfig) -> Re
         match docs_site::fetch_doc_site(homepage_url, max_size_kb).await {
             Ok(doc) => documents.push(doc),
             Err(e) => {
-                tracing::warn!(
-                    "[{}] could not fetch doc site: {}",
-                    metadata.name, e
-                );
+                tracing::warn!("[{}] could not fetch doc site: {}", metadata.name, e);
             }
         }
     }
@@ -804,11 +810,7 @@ mod tests {
                 ecosystem: Ecosystem::Npm,
             },
         ];
-        let filtered = filter_packages(
-            &packages,
-            Some(&["lodash".into(), "chalk".into()]),
-            None,
-        );
+        let filtered = filter_packages(&packages, Some(&["lodash".into(), "chalk".into()]), None);
         assert_eq!(filtered.len(), 2);
     }
 
@@ -833,13 +835,11 @@ mod tests {
 
     #[test]
     fn test_filter_packages_no_filters() {
-        let packages = vec![
-            PackageRef {
-                name: "lodash".into(),
-                version_constraint: "^4".into(),
-                ecosystem: Ecosystem::Npm,
-            },
-        ];
+        let packages = vec![PackageRef {
+            name: "lodash".into(),
+            version_constraint: "^4".into(),
+            ecosystem: Ecosystem::Npm,
+        }];
         let filtered = filter_packages(&packages, None, None);
         assert_eq!(filtered.len(), 1);
     }
@@ -848,7 +848,10 @@ mod tests {
     fn test_write_implementation_to_disk() {
         let dir = tempfile::tempdir().unwrap();
         let mut files = std::collections::HashMap::new();
-        files.insert("src/index.js".to_string(), "module.exports = {}".to_string());
+        files.insert(
+            "src/index.js".to_string(),
+            "module.exports = {}".to_string(),
+        );
         files.insert("package.json".to_string(), "{}".to_string());
         let imp = Implementation {
             package_name: "test-pkg".into(),

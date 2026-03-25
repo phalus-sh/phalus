@@ -1,8 +1,8 @@
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::{Ecosystem, PackageMetadata};
 use super::RegistryError;
+use crate::{Ecosystem, PackageMetadata};
 
 // ---------------------------------------------------------------------------
 // Response shapes
@@ -93,7 +93,8 @@ impl PypiResolver {
         let pkg: PypiResponse = serde_json::from_value(body.clone())
             .map_err(|e| RegistryError::Parse(e.to_string()))?;
 
-        let repository_url = body.get("info")
+        let repository_url = body
+            .get("info")
             .and_then(|i| i.get("project_urls"))
             .and_then(|urls| urls.as_object())
             .and_then(|urls| {

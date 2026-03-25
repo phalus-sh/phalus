@@ -1,10 +1,10 @@
 //! End-to-end test: pipeline components for left-pad
 //! Tests manifest parsing, registry resolution (mocked), and output structure.
 
+use chrono::Utc;
 use phalus::manifest::parse_manifest;
 use phalus::pipeline::{filter_packages, write_csp_to_disk, write_implementation_to_disk};
 use phalus::{CspDocument, CspSpec, Implementation};
-use chrono::Utc;
 use std::collections::HashMap;
 use tempfile::TempDir;
 
@@ -12,14 +12,18 @@ use tempfile::TempDir;
 fn test_manifest_to_pipeline_config() {
     let dir = TempDir::new().unwrap();
     let manifest_path = dir.path().join("package.json");
-    std::fs::write(&manifest_path, r#"{
+    std::fs::write(
+        &manifest_path,
+        r#"{
         "name": "test",
         "version": "1.0.0",
         "dependencies": {
             "left-pad": "1.1.3",
             "is-odd": "3.0.1"
         }
-    }"#).unwrap();
+    }"#,
+    )
+    .unwrap();
 
     let parsed = parse_manifest(&manifest_path).unwrap();
     assert_eq!(parsed.packages.len(), 2);
@@ -41,8 +45,16 @@ fn test_csp_and_implementation_output_structure() {
         package_name: "left-pad".into(),
         package_version: "1.1.3".into(),
         documents: vec![
-            CspDocument { filename: "01-overview.md".into(), content: "Left-pad utility".into(), content_hash: "abc".into() },
-            CspDocument { filename: "02-api-surface.json".into(), content: "{}".into(), content_hash: "def".into() },
+            CspDocument {
+                filename: "01-overview.md".into(),
+                content: "Left-pad utility".into(),
+                content_hash: "abc".into(),
+            },
+            CspDocument {
+                filename: "02-api-surface.json".into(),
+                content: "{}".into(),
+                content_hash: "def".into(),
+            },
         ],
         generated_at: Utc::now(),
     };
@@ -50,13 +62,23 @@ fn test_csp_and_implementation_output_structure() {
     write_csp_to_disk(&csp, &output_dir).unwrap();
 
     // Verify CSP structure
-    assert!(output_dir.join("left-pad/.cleanroom/csp/01-overview.md").exists());
-    assert!(output_dir.join("left-pad/.cleanroom/csp/02-api-surface.json").exists());
+    assert!(output_dir
+        .join("left-pad/.cleanroom/csp/01-overview.md")
+        .exists());
+    assert!(output_dir
+        .join("left-pad/.cleanroom/csp/02-api-surface.json")
+        .exists());
 
     // Simulate implementation output
     let mut files = HashMap::new();
-    files.insert("src/index.js".into(), "module.exports = function leftPad(str, len, ch) {};".into());
-    files.insert("package.json".into(), r#"{"name": "left-pad", "version": "1.1.3"}"#.into());
+    files.insert(
+        "src/index.js".into(),
+        "module.exports = function leftPad(str, len, ch) {};".into(),
+    );
+    files.insert(
+        "package.json".into(),
+        r#"{"name": "left-pad", "version": "1.1.3"}"#.into(),
+    );
     files.insert("LICENSE".into(), "MIT License".into());
 
     let imp = Implementation {
@@ -82,15 +104,19 @@ fn test_audit_trail_creation() {
     let audit_path = dir.path().join("audit.jsonl");
 
     let mut logger = phalus::audit::AuditLogger::new(audit_path.clone()).unwrap();
-    logger.log(phalus::audit::AuditEvent::ManifestParsed {
-        manifest_hash: "test123".into(),
-        package_count: 2,
-    }).unwrap();
-    logger.log(phalus::audit::AuditEvent::DocsFetched {
-        package: "left-pad@1.1.3".into(),
-        urls_accessed: vec!["https://api.github.com/repos/left-pad/left-pad/readme".into()],
-        content_hashes: [("README.md".into(), "abc123".into())].into(),
-    }).unwrap();
+    logger
+        .log(phalus::audit::AuditEvent::ManifestParsed {
+            manifest_hash: "test123".into(),
+            package_count: 2,
+        })
+        .unwrap();
+    logger
+        .log(phalus::audit::AuditEvent::DocsFetched {
+            package: "left-pad@1.1.3".into(),
+            urls_accessed: vec!["https://api.github.com/repos/left-pad/left-pad/readme".into()],
+            content_hashes: [("README.md".into(), "abc123".into())].into(),
+        })
+        .unwrap();
 
     let hash = logger.finalize().unwrap();
     assert_eq!(hash.len(), 64);

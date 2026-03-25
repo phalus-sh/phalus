@@ -1,8 +1,8 @@
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::{Ecosystem, PackageMetadata};
 use super::RegistryError;
+use crate::{Ecosystem, PackageMetadata};
 
 // ---------------------------------------------------------------------------
 // Response shapes

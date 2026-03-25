@@ -49,16 +49,22 @@ pub fn parse_implementation_response(
     }
 
     // Fall back to JSON extraction
-    let obj = super::analyzer::extract_json_object(trimmed)
-        .ok_or_else(|| BuilderError::ParseError("could not find valid JSON object or ===FILE=== delimiters in response".into()))?;
+    let obj = super::analyzer::extract_json_object(trimmed).ok_or_else(|| {
+        BuilderError::ParseError(
+            "could not find valid JSON object or ===FILE=== delimiters in response".into(),
+        )
+    })?;
 
-    let parsed: HashMap<String, String> = obj.into_iter().map(|(k, v)| {
-        let val = match v {
-            serde_json::Value::String(s) => s,
-            other => serde_json::to_string_pretty(&other).unwrap_or_default(),
-        };
-        (k, val)
-    }).collect();
+    let parsed: HashMap<String, String> = obj
+        .into_iter()
+        .map(|(k, v)| {
+            let val = match v {
+                serde_json::Value::String(s) => s,
+                other => serde_json::to_string_pretty(&other).unwrap_or_default(),
+            };
+            (k, val)
+        })
+        .collect();
     Ok(Implementation {
         package_name: package_name.into(),
         files: parsed,

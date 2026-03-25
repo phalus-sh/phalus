@@ -1,8 +1,8 @@
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::{Ecosystem, PackageMetadata};
 use super::RegistryError;
+use crate::{Ecosystem, PackageMetadata};
 
 // ---------------------------------------------------------------------------
 // Response shapes (private, only used for deserialization)
@@ -106,15 +106,16 @@ impl NpmResolver {
         self.build_metadata(pkg, &url)
     }
 
-    fn build_metadata(&self, pkg: NpmPackageResponse, url: &str) -> Result<PackageMetadata, RegistryError> {
-        let repository_url = pkg
-            .repository
-            .and_then(|r| r.url)
-            .map(|u| {
-                u.trim_start_matches("git+")
-                    .trim_end_matches(".git")
-                    .to_string()
-            });
+    fn build_metadata(
+        &self,
+        pkg: NpmPackageResponse,
+        url: &str,
+    ) -> Result<PackageMetadata, RegistryError> {
+        let repository_url = pkg.repository.and_then(|r| r.url).map(|u| {
+            u.trim_start_matches("git+")
+                .trim_end_matches(".git")
+                .to_string()
+        });
 
         let unpacked_size = pkg.dist.and_then(|d| d.unpacked_size);
 

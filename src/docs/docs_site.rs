@@ -59,7 +59,8 @@ pub fn strip_html_to_text(html: &str) -> String {
                 // Keep buffer small — use char-safe truncation
                 if buf.len() > close.len() * 4 {
                     let keep = close.len() + 1;
-                    let drain_to = buf.char_indices()
+                    let drain_to = buf
+                        .char_indices()
                         .rev()
                         .nth(keep)
                         .map(|(i, _)| i)
@@ -72,8 +73,27 @@ pub fn strip_html_to_text(html: &str) -> String {
 
         // Block-level elements become newlines.
         let block_tags = [
-            "p", "div", "br", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr", "td", "th",
-            "blockquote", "pre", "article", "section", "header", "footer", "nav", "main",
+            "p",
+            "div",
+            "br",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "li",
+            "tr",
+            "td",
+            "th",
+            "blockquote",
+            "pre",
+            "article",
+            "section",
+            "header",
+            "footer",
+            "nav",
+            "main",
         ];
         if block_tags.contains(&tag_name) {
             out.push('\n');
@@ -216,7 +236,8 @@ mod tests {
 
     #[test]
     fn test_strip_html_tags() {
-        let html = "<html><body><h1>Title</h1><p>Content here</p><script>evil()</script></body></html>";
+        let html =
+            "<html><body><h1>Title</h1><p>Content here</p><script>evil()</script></body></html>";
         let text = strip_html_to_text(html);
         assert!(text.contains("Title"));
         assert!(text.contains("Content here"));

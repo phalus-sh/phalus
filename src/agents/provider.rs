@@ -49,9 +49,7 @@ impl LlmProvider {
             client: Client::new(),
             api_key: api_key.to_string(),
             model: model.to_string(),
-            base_url: base_url
-                .unwrap_or("https://api.anthropic.com")
-                .to_string(),
+            base_url: base_url.unwrap_or("https://api.anthropic.com").to_string(),
         }
     }
 
@@ -115,8 +113,7 @@ mod tests {
 
     #[test]
     fn test_provider_custom_base_url() {
-        let provider =
-            LlmProvider::new("key", "model", Some("http://localhost:8080"));
+        let provider = LlmProvider::new("key", "model", Some("http://localhost:8080"));
         assert_eq!(provider.base_url, "http://localhost:8080");
     }
 }

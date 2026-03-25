@@ -1,5 +1,5 @@
-use crate::{Ecosystem, PackageRef, ParsedManifest};
 use super::ManifestError;
+use crate::{Ecosystem, PackageRef, ParsedManifest};
 use std::path::Path;
 
 pub struct GoModParser;
