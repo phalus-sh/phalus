@@ -15,11 +15,15 @@ use std::convert::Infallible;
 use std::sync::Arc;
 use tokio::sync::{broadcast, Mutex};
 
+use std::path::PathBuf;
+
+use crate::audit::AuditLogger;
+use crate::config::PhalusConfig;
 use crate::manifest::cargo::CargoParser;
 use crate::manifest::gomod::GoModParser;
 use crate::manifest::npm::NpmParser;
 use crate::manifest::pypi::PypiParser;
-use crate::pipeline::ProgressEvent;
+use crate::pipeline::{PipelineConfig, ProgressEvent};
 use crate::ParsedManifest;
 
 // ---------------------------------------------------------------------------
@@ -141,45 +145,65 @@ async fn create_job(
 
     let tx = state.progress_tx.clone();
     let job_id_clone = job_id.clone();
-    let _license = req.license.unwrap_or_else(|| "mit".to_string());
-    let _isolation = req.isolation.unwrap_or_else(|| "context".to_string());
+    let license = req.license.unwrap_or_else(|| "mit".to_string());
+    let isolation = req.isolation.unwrap_or_else(|| "context".to_string());
 
-    // Spawn background task to process packages
+    // Spawn background task to process packages via the real pipeline
     let state_jobs = Arc::clone(&state) as Arc<AppState>;
     tokio::spawn(async move {
-        let total = parsed.packages.len();
+        let app_config = PhalusConfig::with_env_overrides(PhalusConfig::load().unwrap_or_default());
+
+        let pipeline_config = PipelineConfig {
+            license,
+            output_dir: PathBuf::from("./phalus-output"),
+            target_lang: None,
+            isolation_mode: isolation,
+            similarity_threshold: 0.70,
+            concurrency: 3,
+            dry_run: false,
+        };
+
+        std::fs::create_dir_all(&pipeline_config.output_dir).ok();
+
+        let audit_path = pipeline_config.output_dir.join("audit.jsonl");
+        let audit = Arc::new(tokio::sync::Mutex::new(
+            AuditLogger::new(audit_path).unwrap(),
+        ));
+
+        let mut results = Vec::new();
         for pkg in &parsed.packages {
-            let event = ProgressEvent::PackageStarted {
-                name: pkg.name.clone(),
-            };
-            let _ = tx.send(event);
+            let result = crate::pipeline::run_package(
+                pkg,
+                &pipeline_config,
+                &app_config,
+                audit.clone(),
+                Some(tx.clone()),
+            )
+            .await;
 
-            // Emit phase-done for each conceptual stage
-            for phase in &["resolve", "docs", "analyze", "firewall", "build", "validate"] {
-                let event = ProgressEvent::PhaseDone {
-                    name: pkg.name.clone(),
-                    phase: phase.to_string(),
-                };
-                let _ = tx.send(event);
-            }
+            results.push(serde_json::to_value(&result).unwrap_or_default());
 
-            let event = ProgressEvent::PackageDone {
-                name: pkg.name.clone(),
-                success: true,
-            };
-            let _ = tx.send(event);
+            // PackageDone is already emitted inside run_package
         }
 
-        let event = ProgressEvent::JobDone {
-            total,
-            failed: 0,
-        };
-        let _ = tx.send(event);
+        let failed = results
+            .iter()
+            .filter(|r| {
+                !r.get("success")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true)
+            })
+            .count();
+        let _ = tx.send(ProgressEvent::JobDone {
+            total: results.len(),
+            failed,
+        });
 
         // Update job state
         let mut jobs = state_jobs.jobs.lock().await;
         if let Some(job) = jobs.get_mut(&job_id_clone) {
             job.status = "completed".to_string();
+            job.results = results;
         }
     });
 
