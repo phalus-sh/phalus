@@ -58,10 +58,8 @@ impl GoResolver {
         }
 
         if !response.status().is_success() {
-            response
-                .error_for_status()
-                .map_err(RegistryError::Http)?;
-            unreachable!();
+            let err = response.error_for_status().unwrap_err();
+            return Err(RegistryError::Http(err));
         }
 
         let info: GoProxyInfo = response

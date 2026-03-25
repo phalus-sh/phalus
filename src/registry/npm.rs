@@ -71,12 +71,8 @@ impl NpmResolver {
         }
 
         if !response.status().is_success() {
-            // Force an error by consuming the response as an error.
-            response
-                .error_for_status()
-                .map_err(RegistryError::Http)?;
-            // Unreachable, but satisfies the compiler.
-            unreachable!();
+            let err = response.error_for_status().unwrap_err();
+            return Err(RegistryError::Http(err));
         }
 
         let pkg: NpmPackageResponse = response

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use sha2::{Digest, Sha256};
-use tokio::sync::{Mutex, Semaphore};
+use tokio::sync::{broadcast, Mutex, Semaphore};
 use tokio::task::JoinSet;
 
 use phalus::agents::analyzer;
@@ -20,7 +20,7 @@ use phalus::firewall;
 use phalus::manifest;
 use phalus::pipeline::{
     filter_packages, write_csp_to_disk, write_implementation_to_disk, PackageResult,
-    PipelineConfig,
+    PipelineConfig, ProgressEvent,
 };
 use phalus::registry::crates::CratesResolver;
 use phalus::registry::golang::GoResolver;
@@ -162,6 +162,19 @@ fn resolve_target_lang(target_lang: &Option<String>) -> TargetLanguage {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: emit progress event
+// ---------------------------------------------------------------------------
+
+fn emit_progress(
+    tx: &Option<broadcast::Sender<ProgressEvent>>,
+    event: ProgressEvent,
+) {
+    if let Some(tx) = tx {
+        let _ = tx.send(event);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // run_package: full pipeline for a single package
 // ---------------------------------------------------------------------------
 
@@ -170,13 +183,16 @@ async fn run_package(
     config: &PipelineConfig,
     app_config: &PhalusConfig,
     audit: Arc<Mutex<AuditLogger>>,
+    progress_tx: Option<broadcast::Sender<ProgressEvent>>,
 ) -> PackageResult {
     let name = pkg.name.clone();
     let version = pkg.version_constraint.clone();
 
-    if config.verbose {
-        eprintln!("[{}] Starting pipeline...", name);
-    }
+    tracing::info!("[{}] Starting pipeline...", name);
+
+    emit_progress(&progress_tx, ProgressEvent::PackageStarted {
+        name: name.clone(),
+    });
 
     // 1. Resolve metadata via registry
     let metadata = match resolve_metadata(pkg).await {
@@ -192,12 +208,15 @@ async fn run_package(
         }
     };
 
-    if config.verbose {
-        eprintln!(
-            "[{}] Resolved: {} v{}",
-            name, metadata.name, metadata.version
-        );
-    }
+    tracing::info!(
+        "[{}] Resolved: {} v{}",
+        name, metadata.name, metadata.version
+    );
+
+    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
+        name: name.clone(),
+        phase: "resolve".to_string(),
+    });
 
     // 2. Fetch documentation
     let docs = match fetch_docs(&metadata, app_config).await {
@@ -213,11 +232,13 @@ async fn run_package(
                 .iter()
                 .map(|doc| (doc.name.clone(), doc.content_hash.clone()))
                 .collect();
-            let _ = audit.lock().await.log(AuditEvent::DocsFetched {
+            if let Err(e) = audit.lock().await.log(AuditEvent::DocsFetched {
                 package: format!("{}@{}", metadata.name, metadata.version),
                 urls_accessed: urls,
                 content_hashes,
-            });
+            }) {
+                tracing::error!("audit log failure: {}", e);
+            }
             d
         }
         Err(e) => {
@@ -231,6 +252,11 @@ async fn run_package(
         }
     };
 
+    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
+        name: name.clone(),
+        phase: "docs".to_string(),
+    });
+
     // 3. Check CSP cache or run Agent A
     let cache = CspCache::default_cache();
     let csp = match cache.get(&metadata.name, &metadata.version, &docs.content_hash) {
@@ -240,19 +266,17 @@ async fn run_package(
                 .iter()
                 .map(|d| (d.filename.clone(), d.content_hash.clone()))
                 .collect();
-            let _ = audit.lock().await.log(AuditEvent::SpecCacheHit {
+            if let Err(e) = audit.lock().await.log(AuditEvent::SpecCacheHit {
                 package: format!("{}@{}", metadata.name, metadata.version),
                 spec_hashes,
-            });
-            if config.verbose {
-                eprintln!("[{}] CSP cache hit", name);
+            }) {
+                tracing::error!("audit log failure: {}", e);
             }
+            tracing::info!("[{}] CSP cache hit", name);
             cached
         }
         None => {
-            if config.verbose {
-                eprintln!("[{}] Running Agent A (analyzer)...", name);
-            }
+            tracing::info!("[{}] Running Agent A (analyzer)...", name);
             match run_agent_a(&docs, &metadata, app_config, &audit).await {
                 Ok(spec) => {
                     // Store in cache
@@ -277,20 +301,30 @@ async fn run_package(
         }
     };
 
+    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
+        name: name.clone(),
+        phase: "analyze".to_string(),
+    });
+
     // 4. Firewall crossing
     let (csp, fw_event) = firewall::cross_firewall(csp, &config.isolation_mode);
-    let _ = audit.lock().await.log(fw_event);
+    if let Err(e) = audit.lock().await.log(fw_event) {
+        tracing::error!("audit log failure: {}", e);
+    }
 
     // Write CSP to disk
     if let Err(e) = write_csp_to_disk(&csp, &config.output_dir) {
-        eprintln!("[{}] Warning: failed to write CSP: {}", name, e);
+        tracing::warn!("[{}] failed to write CSP: {}", name, e);
     }
+
+    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
+        name: name.clone(),
+        phase: "firewall".to_string(),
+    });
 
     // 5. Run Agent B (skip if dry_run)
     if config.dry_run {
-        if config.verbose {
-            eprintln!("[{}] Dry run - skipping implementation", name);
-        }
+        tracing::info!("[{}] Dry run - skipping implementation", name);
         return PackageResult {
             name,
             version: metadata.version,
@@ -302,9 +336,7 @@ async fn run_package(
 
     let target_lang = resolve_target_lang(&config.target_lang);
 
-    if config.verbose {
-        eprintln!("[{}] Running Agent B (builder)...", name);
-    }
+    tracing::info!("[{}] Running Agent B (builder)...", name);
 
     let implementation =
         match run_agent_b(&csp, &config.license, &target_lang, app_config, &audit).await {
@@ -330,6 +362,11 @@ async fn run_package(
             validation: None,
         };
     }
+
+    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
+        name: name.clone(),
+        phase: "build".to_string(),
+    });
 
     // 6b. Run generated tests if configured
     let (tests_passed, tests_failed) = if app_config.validation.run_tests {
@@ -428,10 +465,21 @@ async fn run_package(
         tracing::error!("audit log failure: {}", e);
     }
 
+    emit_progress(&progress_tx, ProgressEvent::PhaseDone {
+        name: name.clone(),
+        phase: "validate".to_string(),
+    });
+
+    let success = matches!(verdict, Verdict::Pass);
+    emit_progress(&progress_tx, ProgressEvent::PackageDone {
+        name: name.clone(),
+        success,
+    });
+
     PackageResult {
         name,
         version: metadata.version,
-        success: matches!(verdict, Verdict::Pass),
+        success,
         error: None,
         validation: Some(validation),
     }
@@ -489,8 +537,8 @@ async fn fetch_docs(metadata: &PackageMetadata, config: &PhalusConfig) -> Result
                     documents.push(doc);
                 }
                 Err(e) => {
-                    eprintln!(
-                        "[{}] Warning: could not fetch README: {}",
+                    tracing::warn!(
+                        "[{}] could not fetch README: {}",
                         metadata.name, e
                     );
                 }
@@ -504,8 +552,8 @@ async fn fetch_docs(metadata: &PackageMetadata, config: &PhalusConfig) -> Result
         match docs_site::fetch_doc_site(homepage_url, max_size_kb).await {
             Ok(doc) => documents.push(doc),
             Err(e) => {
-                eprintln!(
-                    "[{}] Warning: could not fetch doc site: {}",
+                tracing::warn!(
+                    "[{}] could not fetch doc site: {}",
                     metadata.name, e
                 );
             }
@@ -560,13 +608,15 @@ async fn run_agent_a(
         .map(|d| (d.filename.clone(), d.content_hash.clone()))
         .collect();
 
-    let _ = audit.lock().await.log(AuditEvent::SpecGenerated {
+    if let Err(e) = audit.lock().await.log(AuditEvent::SpecGenerated {
         package: format!("{}@{}", metadata.name, metadata.version),
         document_hashes: doc_hashes,
         model: provider.model().to_string(),
         prompt_hash,
         symbiont_journal_hash: None,
-    });
+    }) {
+        tracing::error!("audit log failure: {}", e);
+    }
 
     Ok(csp)
 }
@@ -609,13 +659,15 @@ async fn run_agent_b(
         .map(|(k, v)| (k.clone(), format!("{:x}", Sha256::digest(v.as_bytes()))))
         .collect();
 
-    let _ = audit.lock().await.log(AuditEvent::ImplementationGenerated {
+    if let Err(e) = audit.lock().await.log(AuditEvent::ImplementationGenerated {
         package: format!("{}@{}", csp.package_name, csp.package_version),
         file_hashes,
         model: provider.model().to_string(),
         prompt_hash,
         symbiont_journal_hash: None,
-    });
+    }) {
+        tracing::error!("audit log failure: {}", e);
+    }
 
     Ok(implementation)
 }
@@ -691,10 +743,12 @@ async fn cmd_run(
     let audit = Arc::new(Mutex::new(audit_logger));
 
     // Log manifest parsed
-    let _ = audit.lock().await.log(AuditEvent::ManifestParsed {
+    if let Err(e) = audit.lock().await.log(AuditEvent::ManifestParsed {
         manifest_hash,
         package_count: packages.len(),
-    });
+    }) {
+        tracing::error!("audit log failure: {}", e);
+    }
 
     let start_time = std::time::Instant::now();
     let semaphore = Arc::new(Semaphore::new(config.concurrency));
@@ -708,7 +762,7 @@ async fn cmd_run(
 
         join_set.spawn(async move {
             let _permit = semaphore.acquire().await.unwrap();
-            run_package(&pkg, &config, &app_config, audit).await
+            run_package(&pkg, &config, &app_config, audit, None).await
         });
     }
 
@@ -722,12 +776,12 @@ async fn cmd_run(
                     status, pkg_result.name, pkg_result.version
                 );
                 if let Some(err) = &pkg_result.error {
-                    eprintln!("    Error: {}", err);
+                    tracing::error!("    Error: {}", err);
                 }
                 results.push(pkg_result);
             }
             Err(e) => {
-                eprintln!("  Task panicked: {}", e);
+                tracing::error!("Task panicked: {}", e);
             }
         }
     }
@@ -737,12 +791,14 @@ async fn cmd_run(
 
     // Log job completed
     let audit_hash = audit.lock().await.finalize()?;
-    let _ = audit.lock().await.log(AuditEvent::JobCompleted {
+    if let Err(e) = audit.lock().await.log(AuditEvent::JobCompleted {
         packages_processed: results.len(),
         packages_failed: failed,
         total_elapsed_secs: elapsed,
         audit_log_hash: audit_hash,
-    });
+    }) {
+        tracing::error!("audit log failure: {}", e);
+    }
 
     println!();
     println!(
@@ -778,14 +834,14 @@ async fn cmd_run_one(
     let audit_logger = AuditLogger::new(audit_path)?;
     let audit = Arc::new(Mutex::new(audit_logger));
 
-    let result = run_package(&pkg, &config, &app_config, audit).await;
+    let result = run_package(&pkg, &config, &app_config, audit, None).await;
 
     if result.success {
         println!("OK {}@{}", result.name, result.version);
     } else {
-        eprintln!("FAIL {}@{}", result.name, result.version);
+        tracing::error!("FAIL {}@{}", result.name, result.version);
         if let Some(err) = &result.error {
-            eprintln!("  Error: {}", err);
+            tracing::error!("  Error: {}", err);
         }
         std::process::exit(1);
     }
