@@ -450,8 +450,8 @@ async fn run_package(
         tests_failed,
         api_coverage,
         license_ok,
-        similarity: sim.clone(),
-        verdict: verdict.clone(),
+        similarity: sim,
+        verdict,
     };
 
     // Write validation report
@@ -464,7 +464,7 @@ async fn run_package(
     );
 
     // Log validation
-    let verdict_str = match &verdict {
+    let verdict_str = match &validation.verdict {
         Verdict::Pass => "pass",
         Verdict::Fail => "fail",
     };
@@ -473,7 +473,7 @@ async fn run_package(
         syntax_ok,
         tests_passed: Some(tests_passed),
         tests_failed: Some(tests_failed),
-        similarity_score: sim.overall_score,
+        similarity_score: validation.similarity.overall_score,
         verdict: verdict_str.to_string(),
     }) {
         tracing::error!("audit log failure: {}", e);
@@ -484,7 +484,7 @@ async fn run_package(
         phase: "validate".to_string(),
     });
 
-    let success = matches!(verdict, Verdict::Pass);
+    let success = matches!(validation.verdict, Verdict::Pass);
     emit_progress(&progress_tx, ProgressEvent::PackageDone {
         name: name.clone(),
         success,
@@ -1140,6 +1140,9 @@ async fn main() -> Result<()> {
             dry_run,
             verbose,
         } => {
+            if verbose {
+                tracing::info!("verbose mode enabled");
+            }
             let config = PipelineConfig {
                 license,
                 output_dir: output,
@@ -1148,7 +1151,6 @@ async fn main() -> Result<()> {
                 similarity_threshold,
                 concurrency,
                 dry_run,
-                verbose,
             };
             cmd_run(manifest, config, only, exclude).await
         }
@@ -1162,6 +1164,9 @@ async fn main() -> Result<()> {
             similarity_threshold,
             verbose,
         } => {
+            if verbose {
+                tracing::info!("verbose mode enabled");
+            }
             let config = PipelineConfig {
                 license,
                 output_dir: output,
@@ -1170,7 +1175,6 @@ async fn main() -> Result<()> {
                 similarity_threshold,
                 concurrency: 1,
                 dry_run: false,
-                verbose,
             };
             cmd_run_one(package, config).await
         }

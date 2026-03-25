@@ -10,118 +10,30 @@ pub enum ConfigError {
     Parse(#[from] toml::de::Error),
 }
 
-fn default_agent_provider() -> String {
-    "anthropic".to_string()
-}
-
-fn default_agent_a_model() -> String {
-    "claude-sonnet-4-6".to_string()
-}
-
-fn default_agent_b_model() -> String {
-    "claude-sonnet-4-6".to_string()
-}
-
-fn default_isolation_mode() -> String {
-    "context".to_string()
-}
-
-fn default_max_packages_per_job() -> u32 {
-    50
-}
-
-fn default_max_package_size_mb() -> u32 {
-    10
-}
-
-fn default_concurrency() -> u32 {
-    3
-}
-
-fn default_similarity_threshold() -> f64 {
-    0.70
-}
-
-fn default_run_tests() -> bool {
-    true
-}
-
-fn default_syntax_check() -> bool {
-    true
-}
-
-fn default_license() -> String {
-    "mit".to_string()
-}
-
-fn default_output_dir() -> String {
-    "./phalus-output".to_string()
-}
-
-fn default_include_csp() -> bool {
-    true
-}
-
-fn default_include_audit() -> bool {
-    true
-}
-
-fn default_host() -> String {
-    "127.0.0.1".to_string()
-}
-
-fn default_port() -> u16 {
-    3000
-}
-
-fn default_max_readme_size_kb() -> u32 {
-    500
-}
-
-fn default_max_type_def_size_kb() -> u32 {
-    200
-}
-
-fn default_max_code_example_lines() -> u32 {
-    10
-}
-
-fn default_empty_string() -> String {
-    String::new()
-}
-
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LlmConfig {
-    #[serde(default = "default_agent_provider")]
     pub agent_a_provider: String,
-    #[serde(default = "default_agent_a_model")]
     pub agent_a_model: String,
-    #[serde(default = "default_empty_string")]
     pub agent_a_api_key: String,
-    #[serde(default = "default_empty_string")]
     pub agent_a_base_url: String,
-    #[serde(default = "default_agent_provider")]
     pub agent_b_provider: String,
-    #[serde(default = "default_agent_b_model")]
     pub agent_b_model: String,
-    #[serde(default = "default_empty_string")]
     pub agent_b_api_key: String,
-    #[serde(default = "default_empty_string")]
     pub agent_b_base_url: String,
 }
 
 impl Default for LlmConfig {
     fn default() -> Self {
         Self {
-            agent_a_provider: default_agent_provider(),
-            agent_a_model: default_agent_a_model(),
-            agent_a_api_key: default_empty_string(),
-            agent_a_base_url: default_empty_string(),
-            agent_b_provider: default_agent_provider(),
-            agent_b_model: default_agent_b_model(),
-            agent_b_api_key: default_empty_string(),
-            agent_b_base_url: default_empty_string(),
+            agent_a_provider: "anthropic".to_string(),
+            agent_a_model: "claude-sonnet-4-6".to_string(),
+            agent_a_api_key: String::new(),
+            agent_a_base_url: String::new(),
+            agent_b_provider: "anthropic".to_string(),
+            agent_b_model: "claude-sonnet-4-6".to_string(),
+            agent_b_api_key: String::new(),
+            agent_b_base_url: String::new(),
         }
     }
 }
@@ -158,14 +70,13 @@ impl std::fmt::Debug for LlmConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct IsolationConfig {
-    #[serde(default = "default_isolation_mode")]
     pub mode: String,
 }
 
 impl Default for IsolationConfig {
     fn default() -> Self {
         Self {
-            mode: default_isolation_mode(),
+            mode: "context".to_string(),
         }
     }
 }
@@ -173,20 +84,17 @@ impl Default for IsolationConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LimitsConfig {
-    #[serde(default = "default_max_packages_per_job")]
     pub max_packages_per_job: u32,
-    #[serde(default = "default_max_package_size_mb")]
     pub max_package_size_mb: u32,
-    #[serde(default = "default_concurrency")]
     pub concurrency: u32,
 }
 
 impl Default for LimitsConfig {
     fn default() -> Self {
         Self {
-            max_packages_per_job: default_max_packages_per_job(),
-            max_package_size_mb: default_max_package_size_mb(),
-            concurrency: default_concurrency(),
+            max_packages_per_job: 50,
+            max_package_size_mb: 10,
+            concurrency: 3,
         }
     }
 }
@@ -194,20 +102,17 @@ impl Default for LimitsConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ValidationConfig {
-    #[serde(default = "default_similarity_threshold")]
     pub similarity_threshold: f64,
-    #[serde(default = "default_run_tests")]
     pub run_tests: bool,
-    #[serde(default = "default_syntax_check")]
     pub syntax_check: bool,
 }
 
 impl Default for ValidationConfig {
     fn default() -> Self {
         Self {
-            similarity_threshold: default_similarity_threshold(),
-            run_tests: default_run_tests(),
-            syntax_check: default_syntax_check(),
+            similarity_threshold: 0.70,
+            run_tests: true,
+            syntax_check: true,
         }
     }
 }
@@ -215,23 +120,19 @@ impl Default for ValidationConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct OutputConfig {
-    #[serde(default = "default_license")]
     pub default_license: String,
-    #[serde(default = "default_output_dir")]
     pub output_dir: String,
-    #[serde(default = "default_include_csp")]
     pub include_csp: bool,
-    #[serde(default = "default_include_audit")]
     pub include_audit: bool,
 }
 
 impl Default for OutputConfig {
     fn default() -> Self {
         Self {
-            default_license: default_license(),
-            output_dir: default_output_dir(),
-            include_csp: default_include_csp(),
-            include_audit: default_include_audit(),
+            default_license: "mit".to_string(),
+            output_dir: "./phalus-output".to_string(),
+            include_csp: true,
+            include_audit: true,
         }
     }
 }
@@ -240,9 +141,7 @@ impl Default for OutputConfig {
 #[serde(default)]
 pub struct WebConfig {
     pub enabled: bool,
-    #[serde(default = "default_host")]
     pub host: String,
-    #[serde(default = "default_port")]
     pub port: u16,
 }
 
@@ -250,8 +149,8 @@ impl Default for WebConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            host: default_host(),
-            port: default_port(),
+            host: "127.0.0.1".to_string(),
+            port: 3000,
         }
     }
 }
@@ -259,23 +158,19 @@ impl Default for WebConfig {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DocFetcherConfig {
-    #[serde(default = "default_max_readme_size_kb")]
     pub max_readme_size_kb: u32,
-    #[serde(default = "default_max_type_def_size_kb")]
     pub max_type_def_size_kb: u32,
-    #[serde(default = "default_max_code_example_lines")]
     pub max_code_example_lines: u32,
-    #[serde(default = "default_empty_string")]
     pub github_token: String,
 }
 
 impl Default for DocFetcherConfig {
     fn default() -> Self {
         Self {
-            max_readme_size_kb: default_max_readme_size_kb(),
-            max_type_def_size_kb: default_max_type_def_size_kb(),
-            max_code_example_lines: default_max_code_example_lines(),
-            github_token: default_empty_string(),
+            max_readme_size_kb: 500,
+            max_type_def_size_kb: 200,
+            max_code_example_lines: 10,
+            github_token: String::new(),
         }
     }
 }
