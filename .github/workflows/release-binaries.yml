@@ -67,13 +67,19 @@ jobs:
             target
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Install OpenSSL dev (Linux native only)
+        if: runner.os == 'Linux' && !matrix.use_cross
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+
       - name: Build binary
         shell: bash
         run: |
           if [ "${{ matrix.use_cross }}" = "true" ]; then
             export CARGO_PROFILE_RELEASE_LTO=thin
             export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=4
-            cross build --release --target ${{ matrix.target }} -j2
+            cross build --release --target ${{ matrix.target }} --features vendored-openssl -j2
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            cargo build --release --target ${{ matrix.target }} --features vendored-openssl -j2
           else
             cargo build --release --target ${{ matrix.target }} -j2
           fi
