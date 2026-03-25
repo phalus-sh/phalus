@@ -1,0 +1,33 @@
+{
+  "exports": {
+    "default": {
+      "name": "leftPad",
+      "parameters": [
+        {
+          "description": "The value to pad. Numbers are coerced to strings.",
+          "name": "str",
+          "type": "string | number"
+        },
+        {
+          "description": "The desired total length of the resulting padded string.",
+          "name": "len",
+          "type": "number"
+        },
+        {
+          "default": " ",
+          "description": "The character to use for padding. Defaults to a single space character. Numbers are coerced to strings.",
+          "name": "ch",
+          "required": false,
+          "type": "string | number"
+        }
+      ],
+      "returns": {
+        "description": "The input string left-padded with the specified character to at least the specified length.",
+        "type": "string"
+      },
+      "signature": "leftPad(str: string | number, len: number, ch?: string | number) => string",
+      "type": "function"
+    }
+  },
+  "module": "left-pad"
+}

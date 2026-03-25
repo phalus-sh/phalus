@@ -45,13 +45,30 @@ impl PypiResolver {
         Self::new("https://pypi.org".to_string())
     }
 
-    /// Resolve a specific package version and return its metadata.
+    /// Resolve a package version (exact or constraint like ==2.31.0) and return metadata.
     pub async fn resolve(
         &self,
         name: &str,
         version: &str,
     ) -> Result<PackageMetadata, RegistryError> {
-        let url = format!("{}/pypi/{}/{}/json", self.base_url, name, version);
+        // Strip version constraint operators
+        let clean_version = version
+            .trim_start_matches("===")
+            .trim_start_matches("~=")
+            .trim_start_matches("!=")
+            .trim_start_matches("==")
+            .trim_start_matches(">=")
+            .trim_start_matches("<=")
+            .trim_start_matches('>')
+            .trim_start_matches('<')
+            .trim();
+
+        // If version is "*" or empty, fetch latest
+        let url = if clean_version.is_empty() || clean_version == "*" {
+            format!("{}/pypi/{}/json", self.base_url, name)
+        } else {
+            format!("{}/pypi/{}/{}/json", self.base_url, name, clean_version)
+        };
 
         let response = self.client.get(&url).send().await?;
 
