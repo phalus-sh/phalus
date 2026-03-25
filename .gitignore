@@ -1,4 +1,10 @@
+# Rust
+/target/
+
 # Claude Code
 .claude/plans/
 .claude/references/
 docs/superpowers/
+
+# Runtime
+phalus-output/
