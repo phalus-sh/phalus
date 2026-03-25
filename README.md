@@ -168,8 +168,6 @@ This tool raises serious ethical and legal questions about open source sustainab
 
 This project replicates the core pipeline demonstrated by [Malus](https://malus.sh/), presented at FOSDEM 2026 by Dylan Ayrey and Mike Nolan. PHALUS strips the concept down to the essential machinery: the pipeline, the isolation, and the audit trail.
 
-[Phalus](https://phalus.sh) also serves as a test case for the [Symbiont](https://github.com/thirdkeyai/symbiont) agent runtime.
-
 ## License
 
 0BSD
