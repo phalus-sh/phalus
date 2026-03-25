@@ -53,13 +53,24 @@ impl CratesResolver {
         Self::new("https://crates.io".to_string())
     }
 
-    /// Resolve a specific crate version and return its metadata.
+    /// Resolve a crate version (exact or constraint like "1.0") and return metadata.
     pub async fn resolve(
         &self,
         name: &str,
         version: &str,
     ) -> Result<PackageMetadata, RegistryError> {
-        let url = format!("{}/api/v1/crates/{}/{}", self.base_url, name, version);
+        // Strip semver range operators
+        let clean_version = version
+            .trim_start_matches('^')
+            .trim_start_matches('~')
+            .trim_start_matches(">=")
+            .trim_start_matches("<=")
+            .trim_start_matches('>')
+            .trim_start_matches('<')
+            .trim_start_matches('=')
+            .trim();
+
+        let url = format!("{}/api/v1/crates/{}/{}", self.base_url, name, clean_version);
 
         let response = self
             .client

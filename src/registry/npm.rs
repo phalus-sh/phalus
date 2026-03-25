@@ -53,14 +53,37 @@ impl NpmResolver {
         Self::new("https://registry.npmjs.org".to_string())
     }
 
-    /// Resolve a specific package version and return its metadata.
+    /// Resolve a package version (exact or constraint like ^4.17.0) and return metadata.
     pub async fn resolve(
         &self,
         name: &str,
         version: &str,
     ) -> Result<PackageMetadata, RegistryError> {
-        let url = format!("{}/{}/{}", self.base_url, name, version);
+        // Strip semver range prefixes to get a base version for lookup
+        let clean_version = version
+            .trim_start_matches('^')
+            .trim_start_matches('~')
+            .trim_start_matches(">=")
+            .trim_start_matches("<=")
+            .trim_start_matches('>')
+            .trim_start_matches('<')
+            .trim_start_matches('=')
+            .trim();
 
+        // Try exact version first
+        let url = format!("{}/{}/{}", self.base_url, name, clean_version);
+        let response = self.client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let pkg: NpmPackageResponse = response
+                .json()
+                .await
+                .map_err(|e| RegistryError::Parse(e.to_string()))?;
+            return self.build_metadata(pkg, &url);
+        }
+
+        // If exact version fails, fetch the latest version
+        let url = format!("{}/{}/latest", self.base_url, name);
         let response = self.client.get(&url).send().await?;
 
         if response.status() == reqwest::StatusCode::NOT_FOUND {
@@ -80,6 +103,10 @@ impl NpmResolver {
             .await
             .map_err(|e| RegistryError::Parse(e.to_string()))?;
 
+        self.build_metadata(pkg, &url)
+    }
+
+    fn build_metadata(&self, pkg: NpmPackageResponse, url: &str) -> Result<PackageMetadata, RegistryError> {
         let repository_url = pkg
             .repository
             .and_then(|r| r.url)
@@ -100,7 +127,7 @@ impl NpmResolver {
             repository_url,
             homepage_url: pkg.homepage,
             unpacked_size,
-            registry_url: url,
+            registry_url: url.to_string(),
         })
     }
 }
