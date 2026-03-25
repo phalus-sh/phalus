@@ -331,9 +331,35 @@ async fn run_package(
         };
     }
 
+    // 6b. Run generated tests if configured
+    let (tests_passed, tests_failed) = if app_config.validation.run_tests {
+        match phalus::validator::test_runner::run_generated_tests(
+            &implementation.target_language,
+            &config.output_dir.join(&name),
+        )
+        .await
+        {
+            Some(result) => (result.passed, result.failed),
+            None => (0, 0),
+        }
+    } else {
+        (0, 0)
+    };
+
     // 7. Validate
     let generated_code: String = implementation.files.values().cloned().collect();
-    let license_ok = license_check::check_license_file(&implementation.files);
+    let header_ok = implementation
+        .files
+        .iter()
+        .filter(|(k, _)| {
+            k.ends_with(".js")
+                || k.ends_with(".ts")
+                || k.ends_with(".rs")
+                || k.ends_with(".py")
+                || k.ends_with(".go")
+        })
+        .all(|(_, content)| license_check::check_license_header(content, &config.license));
+    let license_ok = license_check::check_license_file(&implementation.files) && header_ok;
     let sim = similarity::compute_similarity(
         "",
         &generated_code,
@@ -369,8 +395,8 @@ async fn run_package(
     let validation = ValidationReport {
         package: metadata.clone(),
         syntax_ok,
-        tests_passed: 0,
-        tests_failed: 0,
+        tests_passed,
+        tests_failed,
         api_coverage,
         license_ok,
         similarity: sim.clone(),
@@ -391,14 +417,16 @@ async fn run_package(
         Verdict::Pass => "pass",
         Verdict::Fail => "fail",
     };
-    let _ = audit.lock().await.log(AuditEvent::ValidationCompleted {
+    if let Err(e) = audit.lock().await.log(AuditEvent::ValidationCompleted {
         package: format!("{}@{}", metadata.name, metadata.version),
         syntax_ok,
-        tests_passed: Some(0),
-        tests_failed: Some(0),
+        tests_passed: Some(tests_passed),
+        tests_failed: Some(tests_failed),
         similarity_score: sim.overall_score,
         verdict: verdict_str.to_string(),
-    });
+    }) {
+        tracing::error!("audit log failure: {}", e);
+    }
 
     PackageResult {
         name,
