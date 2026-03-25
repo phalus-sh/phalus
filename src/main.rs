@@ -108,6 +108,13 @@ enum Commands {
     },
     /// Show configuration
     Config,
+    /// Start the local web UI
+    Serve {
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+        #[arg(long, default_value_t = 3000)]
+        port: u16,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -981,5 +988,9 @@ async fn main() -> Result<()> {
         } => cmd_validate(output_dir, similarity_threshold).await,
 
         Commands::Config => cmd_config(),
+
+        Commands::Serve { host, port } => {
+            phalus::web::start_server(&host, port).await
+        }
     }
 }
