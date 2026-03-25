@@ -1,4 +1,7 @@
+pub mod cargo;
+pub mod gomod;
 pub mod npm;
+pub mod pypi;
 
 use crate::ParsedManifest;
 use std::path::Path;
@@ -18,6 +21,15 @@ pub fn parse_manifest(path: &Path) -> Result<ParsedManifest, ManifestError> {
     let content = std::fs::read_to_string(path)?;
     if npm::NpmParser::detect(path) {
         return npm::NpmParser::parse(&content);
+    }
+    if pypi::PypiParser::detect(path) {
+        return pypi::PypiParser::parse(&content);
+    }
+    if cargo::CargoParser::detect(path) {
+        return cargo::CargoParser::parse(&content);
+    }
+    if gomod::GoModParser::detect(path) {
+        return gomod::GoModParser::parse(&content);
     }
     Err(ManifestError::Unsupported(
         path.file_name()
