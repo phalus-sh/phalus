@@ -4,7 +4,7 @@
 
 **Status:** Draft
 **Date:** 2026-03-24
-**License:** Apache-2.0 (project code) — output code license is user-configurable
+**License:** 0BSD (project code) — output code license is user-configurable
 
 ---
 
@@ -696,7 +696,7 @@ This aligns with the observation from gwern on the Malus HN thread: an AI transl
 ```
 phalus/
 ├── README.md
-├── LICENSE                          # Apache-2.0
+├── LICENSE                          # 0BSD
 ├── Cargo.toml                       # if Rust, or package.json if Node
 │
 ├── src/
