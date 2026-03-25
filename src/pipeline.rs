@@ -18,7 +18,6 @@ pub struct PipelineConfig {
     pub similarity_threshold: f64,
     pub concurrency: usize,
     pub dry_run: bool,
-    pub verbose: bool,
 }
 
 impl Default for PipelineConfig {
@@ -31,7 +30,6 @@ impl Default for PipelineConfig {
             similarity_threshold: 0.70,
             concurrency: 3,
             dry_run: false,
-            verbose: false,
         }
     }
 }
