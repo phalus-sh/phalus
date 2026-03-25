@@ -6,15 +6,47 @@ No user accounts. No payments. No SaaS. You run it on your own machine with your
 
 ![PHALUS Web UI](docs/images/web-ui.png)
 
-## Build
+## Install
+
+### From crates.io
 
 ```sh
-cargo build --release -j2
+cargo install phalus
+```
+
+### Download binary
+
+Pre-built binaries for Linux (x86_64, aarch64), macOS (Apple Silicon), and Windows are available from [GitHub Releases](https://github.com/phalus-sh/phalus/releases).
+
+```sh
+# Linux (x86_64)
+curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.1.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+sudo mv phalus /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.1.0-aarch64-apple-darwin.tar.gz | tar xz
+sudo mv phalus /usr/local/bin/
+```
+
+### Docker
+
+```sh
+docker run -p 3000:3000 \
+  -e PHALUS_LLM__AGENT_A_API_KEY=sk-ant-... \
+  -e PHALUS_LLM__AGENT_B_API_KEY=sk-ant-... \
+  ghcr.io/phalus-sh/phalus:latest
+```
+
+### Build from source
+
+```sh
+git clone https://github.com/phalus-sh/phalus.git
+cd phalus && cargo build --release -j2
 ```
 
 ## Quick Start
 
-Set your API key:
+Set your API keys:
 
 ```sh
 export PHALUS_LLM__AGENT_A_API_KEY=sk-ant-...
