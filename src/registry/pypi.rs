@@ -63,16 +63,29 @@ impl PypiResolver {
         }
 
         if !response.status().is_success() {
-            response
-                .error_for_status()
-                .map_err(RegistryError::Http)?;
-            unreachable!();
+            let err = response.error_for_status().unwrap_err();
+            return Err(RegistryError::Http(err));
         }
 
-        let pkg: PypiResponse = response
+        // Get raw JSON for project_urls extraction
+        let body: serde_json::Value = response
             .json()
             .await
             .map_err(|e| RegistryError::Parse(e.to_string()))?;
+
+        let pkg: PypiResponse = serde_json::from_value(body.clone())
+            .map_err(|e| RegistryError::Parse(e.to_string()))?;
+
+        let repository_url = body.get("info")
+            .and_then(|i| i.get("project_urls"))
+            .and_then(|urls| urls.as_object())
+            .and_then(|urls| {
+                urls.get("Source")
+                    .or(urls.get("Repository"))
+                    .or(urls.get("GitHub"))
+            })
+            .and_then(|v| v.as_str())
+            .map(String::from);
 
         Ok(PackageMetadata {
             name: pkg.info.name,
@@ -80,7 +93,7 @@ impl PypiResolver {
             ecosystem: Ecosystem::PyPI,
             description: pkg.info.summary,
             license: pkg.info.license,
-            repository_url: None,
+            repository_url,
             homepage_url: pkg.info.home_page,
             unpacked_size: None,
             registry_url: url,
