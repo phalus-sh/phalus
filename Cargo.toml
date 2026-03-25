@@ -6,7 +6,6 @@ license = "0BSD"
 description = "Private Headless Automated License Uncoupling System"
 
 [dependencies]
-# TODO: add symbi-runtime when API is confirmed
 clap = { version = "4", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json"] }

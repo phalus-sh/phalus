@@ -14,6 +14,7 @@ use phalus::agents::provider::LlmProvider;
 use phalus::audit::{AuditEvent, AuditLogger};
 use phalus::cache::CspCache;
 use phalus::config::PhalusConfig;
+use phalus::docs::docs_site;
 use phalus::docs::github::GitHubFetcher;
 use phalus::firewall;
 use phalus::manifest;
@@ -21,7 +22,10 @@ use phalus::pipeline::{
     filter_packages, write_csp_to_disk, write_implementation_to_disk, PackageResult,
     PipelineConfig,
 };
+use phalus::registry::crates::CratesResolver;
+use phalus::registry::golang::GoResolver;
 use phalus::registry::npm::NpmResolver;
+use phalus::registry::pypi::PypiResolver;
 use phalus::validator::license_check;
 use phalus::validator::similarity;
 use phalus::{
@@ -389,13 +393,20 @@ async fn resolve_metadata(pkg: &PackageRef) -> Result<PackageMetadata> {
     match pkg.ecosystem {
         Ecosystem::Npm => {
             let resolver = NpmResolver::default_registry();
-            let meta = resolver.resolve(&pkg.name, &pkg.version_constraint).await?;
-            Ok(meta)
+            Ok(resolver.resolve(&pkg.name, &pkg.version_constraint).await?)
         }
-        _ => anyhow::bail!(
-            "registry resolver not yet implemented for {}",
-            pkg.ecosystem
-        ),
+        Ecosystem::PyPI => {
+            let resolver = PypiResolver::default_registry();
+            Ok(resolver.resolve(&pkg.name, &pkg.version_constraint).await?)
+        }
+        Ecosystem::Crates => {
+            let resolver = CratesResolver::default_registry();
+            Ok(resolver.resolve(&pkg.name, &pkg.version_constraint).await?)
+        }
+        Ecosystem::Go => {
+            let resolver = GoResolver::default_registry();
+            Ok(resolver.resolve(&pkg.name, &pkg.version_constraint).await?)
+        }
     }
 }
 
@@ -412,17 +423,39 @@ async fn fetch_docs(metadata: &PackageMetadata, config: &PhalusConfig) -> Result
 
     let fetcher = GitHubFetcher::default_github(token);
 
+    let max_code_example_lines = config.doc_fetcher.max_code_example_lines as usize;
+
     let mut documents = Vec::new();
     if let Some(repo_url) = &metadata.repository_url {
         if let Some((owner, repo)) = GitHubFetcher::parse_github_url(repo_url) {
             match fetcher.fetch_readme(&owner, &repo).await {
-                Ok(doc) => documents.push(doc),
+                Ok(mut doc) => {
+                    doc.content = docs_site::strip_long_code_examples(
+                        &doc.content,
+                        max_code_example_lines,
+                    );
+                    documents.push(doc);
+                }
                 Err(e) => {
                     eprintln!(
                         "[{}] Warning: could not fetch README: {}",
                         metadata.name, e
                     );
                 }
+            }
+        }
+    }
+
+    // Fetch documentation site if homepage is available
+    if let Some(homepage_url) = &metadata.homepage_url {
+        let max_size_kb = config.doc_fetcher.max_readme_size_kb as u64;
+        match docs_site::fetch_doc_site(homepage_url, max_size_kb).await {
+            Ok(doc) => documents.push(doc),
+            Err(e) => {
+                eprintln!(
+                    "[{}] Warning: could not fetch doc site: {}",
+                    metadata.name, e
+                );
             }
         }
     }
