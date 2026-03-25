@@ -26,8 +26,10 @@ use phalus::registry::crates::CratesResolver;
 use phalus::registry::golang::GoResolver;
 use phalus::registry::npm::NpmResolver;
 use phalus::registry::pypi::PypiResolver;
+use phalus::validator::api_surface::check_api_surface;
 use phalus::validator::license_check;
 use phalus::validator::similarity;
+use phalus::validator::syntax::run_syntax_check;
 use phalus::{
     Documentation, Ecosystem, PackageMetadata, PackageRef, TargetLanguage,
     ValidationReport, Verdict,
@@ -339,7 +341,26 @@ async fn run_package(
         &[],
         config.similarity_threshold,
     );
-    let verdict = if sim.overall_score <= config.similarity_threshold && license_ok {
+
+    // Syntax check (skip gracefully if the check tool isn't installed)
+    let syntax_ok = run_syntax_check(
+        &implementation.target_language,
+        &config.output_dir.join(&name),
+    )
+    .await
+    .unwrap_or(true);
+
+    // API surface check
+    let expected_exports: Vec<String> = csp
+        .documents
+        .iter()
+        .find(|d| d.filename.contains("api-surface"))
+        .map(|d| extract_export_names(&d.content))
+        .unwrap_or_default();
+
+    let api_coverage = check_api_surface(&expected_exports, &generated_code);
+
+    let verdict = if sim.overall_score <= config.similarity_threshold && license_ok && syntax_ok {
         Verdict::Pass
     } else {
         Verdict::Fail
@@ -347,10 +368,10 @@ async fn run_package(
 
     let validation = ValidationReport {
         package: metadata.clone(),
-        syntax_ok: true, // would need actual syntax check
+        syntax_ok,
         tests_passed: 0,
         tests_failed: 0,
-        api_coverage: 0.0,
+        api_coverage,
         license_ok,
         similarity: sim.clone(),
         verdict: verdict.clone(),
@@ -360,7 +381,10 @@ async fn run_package(
     let report_dir = config.output_dir.join(&name);
     let _ = std::fs::create_dir_all(&report_dir);
     let report_path = report_dir.join("validation.json");
-    let _ = std::fs::write(&report_path, serde_json::to_string_pretty(&validation).unwrap_or_default());
+    let _ = std::fs::write(
+        &report_path,
+        serde_json::to_string_pretty(&validation).unwrap_or_default(),
+    );
 
     // Log validation
     let verdict_str = match &verdict {
@@ -369,7 +393,7 @@ async fn run_package(
     };
     let _ = audit.lock().await.log(AuditEvent::ValidationCompleted {
         package: format!("{}@{}", metadata.name, metadata.version),
-        syntax_ok: true,
+        syntax_ok,
         tests_passed: Some(0),
         tests_failed: Some(0),
         similarity_score: sim.overall_score,
@@ -932,6 +956,41 @@ fn collect_files(
         }
     }
     Ok(())
+}
+
+/// Best-effort extraction of export/function names from an API surface document.
+///
+/// Looks for JSON keys such as `"functions"`, `"methods"`, or `"exports"` that
+/// contain arrays of strings, or falls back to treating top-level object keys
+/// as export names.
+fn extract_export_names(content: &str) -> Vec<String> {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(content) else {
+        return Vec::new();
+    };
+
+    // Try well-known array keys first.
+    for key in &["functions", "methods", "exports"] {
+        if let Some(arr) = value.get(key).and_then(|v| v.as_array()) {
+            let names: Vec<String> = arr
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect();
+            if !names.is_empty() {
+                return names;
+            }
+        }
+    }
+
+    // Fallback: use top-level object keys (excluding metadata-like keys).
+    if let Some(obj) = value.as_object() {
+        return obj
+            .keys()
+            .filter(|k| !["name", "version", "description", "type"].contains(&k.as_str()))
+            .cloned()
+            .collect();
+    }
+
+    Vec::new()
 }
 
 fn cmd_config() -> Result<()> {

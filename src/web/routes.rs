@@ -1,12 +1,17 @@
 use axum::{
     extract::State,
-    response::{Html, Json},
+    http::StatusCode,
+    response::{Html, IntoResponse, Json},
     routing::{get, post},
     Router,
 };
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
+use crate::manifest::cargo::CargoParser;
+use crate::manifest::gomod::GoModParser;
+use crate::manifest::npm::NpmParser;
+use crate::manifest::pypi::PypiParser;
 use crate::pipeline::ProgressEvent;
 
 pub struct AppState {
@@ -28,10 +33,35 @@ async fn serve_index() -> Html<&'static str> {
 async fn parse_manifest(
     State(_state): State<Arc<AppState>>,
     body: String,
-) -> Json<serde_json::Value> {
-    // Try to parse the body as a manifest
-    let _ = body;
-    Json(serde_json::json!({"status": "ok", "message": "manifest parsing endpoint"}))
+) -> impl IntoResponse {
+    // Try npm (package.json)
+    if let Ok(manifest) = NpmParser::parse(&body) {
+        return Json(serde_json::to_value(&manifest).unwrap()).into_response();
+    }
+    // Try pypi (requirements.txt)
+    if let Ok(manifest) = PypiParser::parse(&body) {
+        if !manifest.packages.is_empty() {
+            return Json(serde_json::to_value(&manifest).unwrap()).into_response();
+        }
+    }
+    // Try cargo (Cargo.toml)
+    if let Ok(manifest) = CargoParser::parse(&body) {
+        if !manifest.packages.is_empty() {
+            return Json(serde_json::to_value(&manifest).unwrap()).into_response();
+        }
+    }
+    // Try go.mod
+    if let Ok(manifest) = GoModParser::parse(&body) {
+        if !manifest.packages.is_empty() {
+            return Json(serde_json::to_value(&manifest).unwrap()).into_response();
+        }
+    }
+
+    (
+        StatusCode::BAD_REQUEST,
+        Json(serde_json::json!({"error": "could not parse manifest"})),
+    )
+        .into_response()
 }
 
 async fn health() -> Json<serde_json::Value> {
