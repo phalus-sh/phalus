@@ -1,5 +1,5 @@
 pub fn is_source_code(path: &str) -> bool {
-    let path = path.replace('\\', "/");
+    let path = path.replace('\\', "/").to_lowercase();
 
     // Blocked test/spec directory prefixes
     let blocked_dirs = ["test/", "tests/", "__tests__/", "spec/"];
@@ -16,8 +16,8 @@ pub fn is_source_code(path: &str) -> bool {
 
     // Blocked source extensions
     let blocked_extensions = [
-        ".js", ".py", ".rs", ".go", ".java", ".rb", ".php", ".c", ".cpp", ".cc", ".h", ".cs",
-        ".ts",
+        ".js", ".jsx", ".mjs", ".cjs", ".py", ".rs", ".go", ".java", ".rb", ".php", ".c", ".cpp",
+        ".cc", ".h", ".cs", ".ts", ".tsx", ".mts", ".cts",
     ];
     for ext in &blocked_extensions {
         if path.ends_with(ext) {

@@ -464,6 +464,12 @@
     document.getElementById("results-empty").style.display = "";
   }
 
+  function escapeHtml(s) {
+    const div = document.createElement("div");
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
   function addResult(pkg, version, pass, err) {
     document.getElementById("results-empty").style.display = "none";
     const div = document.createElement("div");
@@ -471,7 +477,7 @@
     const badge = pass
       ? '<span class="badge-pass">PASS</span>'
       : '<span class="badge-fail">FAIL</span>';
-    div.innerHTML = `<span class="pkg">${pkg}@${version}</span>${badge}`;
+    div.innerHTML = `<span class="pkg">${escapeHtml(pkg)}@${escapeHtml(version)}</span>${badge}`;
     if (err) {
       const note = document.createElement("div");
       note.style.cssText = "font-size:11px;color:var(--danger);padding-bottom:4px;";

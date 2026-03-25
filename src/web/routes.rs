@@ -20,6 +20,7 @@ use crate::manifest::gomod::GoModParser;
 use crate::manifest::npm::NpmParser;
 use crate::manifest::pypi::PypiParser;
 use crate::pipeline::ProgressEvent;
+use crate::ParsedManifest;
 
 // ---------------------------------------------------------------------------
 // Job state tracking
@@ -54,38 +55,43 @@ async fn serve_index() -> Html<&'static str> {
     Html(include_str!("static/index.html"))
 }
 
+/// Try each manifest parser in order, requiring non-empty results.
+fn try_parse_manifest(body: &str) -> Option<ParsedManifest> {
+    if let Ok(manifest) = NpmParser::parse(body) {
+        if !manifest.packages.is_empty() {
+            return Some(manifest);
+        }
+    }
+    if let Ok(manifest) = PypiParser::parse(body) {
+        if !manifest.packages.is_empty() {
+            return Some(manifest);
+        }
+    }
+    if let Ok(manifest) = CargoParser::parse(body) {
+        if !manifest.packages.is_empty() {
+            return Some(manifest);
+        }
+    }
+    if let Ok(manifest) = GoModParser::parse(body) {
+        if !manifest.packages.is_empty() {
+            return Some(manifest);
+        }
+    }
+    None
+}
+
 async fn parse_manifest(
     State(_state): State<Arc<AppState>>,
     body: String,
 ) -> impl IntoResponse {
-    // Try npm (package.json)
-    if let Ok(manifest) = NpmParser::parse(&body) {
-        return Json(serde_json::to_value(&manifest).unwrap()).into_response();
+    match try_parse_manifest(&body) {
+        Some(manifest) => Json(serde_json::to_value(&manifest).unwrap()).into_response(),
+        None => (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "could not parse manifest"})),
+        )
+            .into_response(),
     }
-    // Try pypi (requirements.txt)
-    if let Ok(manifest) = PypiParser::parse(&body) {
-        if !manifest.packages.is_empty() {
-            return Json(serde_json::to_value(&manifest).unwrap()).into_response();
-        }
-    }
-    // Try cargo (Cargo.toml)
-    if let Ok(manifest) = CargoParser::parse(&body) {
-        if !manifest.packages.is_empty() {
-            return Json(serde_json::to_value(&manifest).unwrap()).into_response();
-        }
-    }
-    // Try go.mod
-    if let Ok(manifest) = GoModParser::parse(&body) {
-        if !manifest.packages.is_empty() {
-            return Json(serde_json::to_value(&manifest).unwrap()).into_response();
-        }
-    }
-
-    (
-        StatusCode::BAD_REQUEST,
-        Json(serde_json::json!({"error": "could not parse manifest"})),
-    )
-        .into_response()
 }
 
 async fn health() -> Json<serde_json::Value> {
@@ -110,19 +116,7 @@ async fn create_job(
     let job_id = uuid::Uuid::new_v4().to_string();
 
     // Parse the manifest
-    let parsed = if let Ok(m) = NpmParser::parse(&req.manifest_content) {
-        Some(m)
-    } else if let Ok(m) = PypiParser::parse(&req.manifest_content) {
-        if m.packages.is_empty() { None } else { Some(m) }
-    } else if let Ok(m) = CargoParser::parse(&req.manifest_content) {
-        if m.packages.is_empty() { None } else { Some(m) }
-    } else if let Ok(m) = GoModParser::parse(&req.manifest_content) {
-        if m.packages.is_empty() { None } else { Some(m) }
-    } else {
-        None
-    };
-
-    let parsed = match parsed {
+    let parsed = match try_parse_manifest(&req.manifest_content) {
         Some(p) => p,
         None => {
             return (

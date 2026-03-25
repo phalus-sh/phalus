@@ -307,7 +307,7 @@ async fn run_package(
     });
 
     // 4. Firewall crossing
-    let (csp, fw_event) = firewall::cross_firewall(csp, &config.isolation_mode);
+    let (csp, fw_event) = firewall::cross_firewall(csp, &config.isolation_mode).await;
     if let Err(e) = audit.lock().await.log(fw_event) {
         tracing::error!("audit log failure: {}", e);
     }

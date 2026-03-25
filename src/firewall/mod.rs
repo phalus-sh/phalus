@@ -4,10 +4,10 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
 /// Dispatch firewall crossing based on isolation mode.
-pub fn cross_firewall(csp: CspSpec, isolation_mode: &str) -> (CspSpec, AuditEvent) {
+pub async fn cross_firewall(csp: CspSpec, isolation_mode: &str) -> (CspSpec, AuditEvent) {
     match isolation_mode {
-        "process" => cross_firewall_process(csp),
-        "container" => cross_firewall_container(csp),
+        "process" => cross_firewall_process(csp).await,
+        "container" => cross_firewall_container(csp).await,
         _ => cross_firewall_context(csp),
     }
 }
@@ -28,9 +28,9 @@ fn cross_firewall_context(csp: CspSpec) -> (CspSpec, AuditEvent) {
 /// Process mode: serialize CSP to a temp file and read it back, proving
 /// the data crosses a serialization boundary (as it would with a real
 /// separate-process Agent B).
-fn cross_firewall_process(csp: CspSpec) -> (CspSpec, AuditEvent) {
+async fn cross_firewall_process(csp: CspSpec) -> (CspSpec, AuditEvent) {
     let temp_dir = std::env::temp_dir().join("phalus-firewall");
-    let _ = std::fs::create_dir_all(&temp_dir);
+    let _ = tokio::fs::create_dir_all(&temp_dir).await;
     let safe_name = csp
         .package_name
         .replace(['/', '\\'], "_")
@@ -43,14 +43,16 @@ fn cross_firewall_process(csp: CspSpec) -> (CspSpec, AuditEvent) {
 
     // Serialize to disk
     let serialized = serde_json::to_string_pretty(&csp).unwrap_or_default();
-    let _ = std::fs::write(&temp_path, &serialized);
+    let _ = tokio::fs::write(&temp_path, &serialized).await;
 
     // Read back from disk (proving serialization boundary)
-    let read_back = std::fs::read_to_string(&temp_path).unwrap_or(serialized);
+    let read_back = tokio::fs::read_to_string(&temp_path)
+        .await
+        .unwrap_or(serialized);
     let deserialized: CspSpec = serde_json::from_str(&read_back).unwrap_or(csp);
 
     // Clean up temp file
-    let _ = std::fs::remove_file(&temp_path);
+    let _ = tokio::fs::remove_file(&temp_path).await;
 
     let (checksums, doc_names) = compute_checksums(&deserialized);
     let event = AuditEvent::FirewallCrossing {
@@ -65,11 +67,11 @@ fn cross_firewall_process(csp: CspSpec) -> (CspSpec, AuditEvent) {
 
 /// Container mode: write CSP to an isolated temp dir, check Docker availability,
 /// and use real container isolation when Docker is present.
-fn cross_firewall_container(csp: CspSpec) -> (CspSpec, AuditEvent) {
+async fn cross_firewall_container(csp: CspSpec) -> (CspSpec, AuditEvent) {
     let temp_dir = std::env::temp_dir().join("phalus-firewall-container");
-    if let Err(e) = std::fs::create_dir_all(&temp_dir) {
+    if let Err(e) = tokio::fs::create_dir_all(&temp_dir).await {
         tracing::error!("failed to create container firewall dir: {}", e);
-        return cross_firewall_process(csp);
+        return cross_firewall_process(csp).await;
     }
 
     let safe_name = csp
@@ -83,17 +85,18 @@ fn cross_firewall_container(csp: CspSpec) -> (CspSpec, AuditEvent) {
     let temp_path = temp_dir.join(format!("csp-{}-{}.json", safe_name, safe_version));
 
     let serialized = serde_json::to_string_pretty(&csp).unwrap_or_default();
-    if let Err(e) = std::fs::write(&temp_path, &serialized) {
+    if let Err(e) = tokio::fs::write(&temp_path, &serialized).await {
         tracing::error!("failed to write CSP for container isolation: {}", e);
-        return cross_firewall_process(csp);
+        return cross_firewall_process(csp).await;
     }
 
     // Verify Docker availability
-    let docker_available = std::process::Command::new("docker")
+    let docker_available = tokio::process::Command::new("docker")
         .arg("info")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
+        .await
         .map(|s| s.success())
         .unwrap_or(false);
 
@@ -110,9 +113,11 @@ fn cross_firewall_container(csp: CspSpec) -> (CspSpec, AuditEvent) {
     }
 
     // Read back through serialization boundary
-    let read_back = std::fs::read_to_string(&temp_path).unwrap_or(serialized);
+    let read_back = tokio::fs::read_to_string(&temp_path)
+        .await
+        .unwrap_or(serialized);
     let deserialized: CspSpec = serde_json::from_str(&read_back).unwrap_or(csp);
-    let _ = std::fs::remove_file(&temp_path);
+    let _ = tokio::fs::remove_file(&temp_path).await;
 
     let (checksums, doc_names) = compute_checksums(&deserialized);
     let event = AuditEvent::FirewallCrossing {
@@ -170,10 +175,10 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_crossing_produces_audit_event() {
+    #[tokio::test]
+    async fn test_crossing_produces_audit_event() {
         let csp = sample_csp();
-        let (passed, event) = cross_firewall(csp.clone(), "context");
+        let (passed, event) = cross_firewall(csp.clone(), "context").await;
         assert_eq!(passed.documents.len(), csp.documents.len());
         match event {
             AuditEvent::FirewallCrossing {
@@ -193,10 +198,10 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_checksums_are_sha256() {
+    #[tokio::test]
+    async fn test_checksums_are_sha256() {
         let csp = sample_csp();
-        let (_, event) = cross_firewall(csp, "context");
+        let (_, event) = cross_firewall(csp, "context").await;
         if let AuditEvent::FirewallCrossing { sha256_checksums, .. } = event {
             for hash in sha256_checksums.values() {
                 assert_eq!(hash.len(), 64);
@@ -204,10 +209,10 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_process_isolation_roundtrip() {
+    #[tokio::test]
+    async fn test_process_isolation_roundtrip() {
         let csp = sample_csp();
-        let (result, event) = cross_firewall(csp.clone(), "process");
+        let (result, event) = cross_firewall(csp.clone(), "process").await;
         assert_eq!(result.package_name, csp.package_name);
         assert_eq!(result.documents.len(), csp.documents.len());
         if let AuditEvent::FirewallCrossing { isolation_mode, .. } = event {
@@ -217,10 +222,10 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_container_isolation_roundtrip() {
+    #[tokio::test]
+    async fn test_container_isolation_roundtrip() {
         let csp = sample_csp();
-        let (result, event) = cross_firewall(csp.clone(), "container");
+        let (result, event) = cross_firewall(csp.clone(), "container").await;
         assert_eq!(result.package_name, csp.package_name);
         if let AuditEvent::FirewallCrossing { isolation_mode, .. } = event {
             assert!(

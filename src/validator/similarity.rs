@@ -8,7 +8,7 @@ pub fn token_jaccard(a: &str, b: &str) -> f64 {
     let intersection = set_a.intersection(&set_b).count();
     let union = set_a.union(&set_b).count();
     if union == 0 {
-        return 1.0;
+        return 0.0;
     }
     intersection as f64 / union as f64
 }
@@ -19,7 +19,7 @@ pub fn function_name_overlap(original: &[String], generated: &[String]) -> f64 {
     let intersection = set_a.intersection(&set_b).count();
     let union = set_a.union(&set_b).count();
     if union == 0 {
-        return 1.0;
+        return 0.0;
     }
     intersection as f64 / union as f64
 }
