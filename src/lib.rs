@@ -117,7 +117,7 @@ pub struct CspSpec {
 pub struct Implementation {
     pub package_name: String,
     pub files: HashMap<String, String>,
-    pub target_language: TargetLanguage,
+    pub target_language: String,
 }
 
 // ---------------------------------------------------------------------------
