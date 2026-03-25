@@ -17,13 +17,27 @@ Requirements:
 You are free to choose any internal implementation approach.
 The specification describes WHAT the code should do, not HOW.
 
-Output your implementation as a JSON object mapping file paths to file contents:
-{
-  "package.json": "{ ... }",
-  "src/index.js": "...",
-  "test/index.test.js": "...",
-  "LICENSE": "...",
-  "README.md": "..."
-}
+Output each file using this exact delimiter format:
+
+===FILE: package.json===
+{ file contents here }
+===END_FILE===
+
+===FILE: src/index.js===
+file contents here
+===END_FILE===
+
+===FILE: test/index.test.js===
+file contents here
+===END_FILE===
+
+===FILE: LICENSE===
+file contents here
+===END_FILE===
+
+===FILE: README.md===
+file contents here
+===END_FILE===
 
 Include all files needed for a complete, installable package.
+Every file MUST be wrapped in ===FILE: path=== and ===END_FILE=== delimiters.

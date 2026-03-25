@@ -37,8 +37,20 @@ pub fn parse_implementation_response(
     target_language: &str,
 ) -> Result<Implementation, BuilderError> {
     let trimmed = response.trim();
+
+    // Try delimiter-based format first (===FILE: path===...===END_FILE===)
+    let files = parse_delimiter_format(trimmed);
+    if !files.is_empty() {
+        return Ok(Implementation {
+            package_name: package_name.into(),
+            files,
+            target_language: target_language.into(),
+        });
+    }
+
+    // Fall back to JSON extraction
     let obj = super::analyzer::extract_json_object(trimmed)
-        .ok_or_else(|| BuilderError::ParseError("could not find valid JSON object in response".into()))?;
+        .ok_or_else(|| BuilderError::ParseError("could not find valid JSON object or ===FILE=== delimiters in response".into()))?;
 
     let parsed: HashMap<String, String> = obj.into_iter().map(|(k, v)| {
         let val = match v {
@@ -52,6 +64,43 @@ pub fn parse_implementation_response(
         files: parsed,
         target_language: target_language.into(),
     })
+}
+
+/// Parse ===FILE: path===...===END_FILE=== delimiter format.
+fn parse_delimiter_format(text: &str) -> HashMap<String, String> {
+    let mut files = HashMap::new();
+    let mut current_path: Option<String> = None;
+    let mut current_content = String::new();
+
+    for line in text.lines() {
+        if let Some(rest) = line.strip_prefix("===FILE:") {
+            // Save previous file if any
+            if let Some(path) = current_path.take() {
+                files.insert(path, current_content.trim_end().to_string());
+                current_content.clear();
+            }
+            // Extract path: "===FILE: src/index.js===" -> "src/index.js"
+            let path = rest.trim_end_matches('=').trim().to_string();
+            if !path.is_empty() {
+                current_path = Some(path);
+            }
+        } else if line.trim() == "===END_FILE===" {
+            if let Some(path) = current_path.take() {
+                files.insert(path, current_content.trim_end().to_string());
+                current_content.clear();
+            }
+        } else if current_path.is_some() {
+            current_content.push_str(line);
+            current_content.push('\n');
+        }
+    }
+
+    // Handle unclosed last file
+    if let Some(path) = current_path {
+        files.insert(path, current_content.trim_end().to_string());
+    }
+
+    files
 }
 
 pub fn system_prompt() -> &'static str {
@@ -94,10 +143,38 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_implementation_response() {
+    fn test_parse_implementation_response_json() {
         let response = r#"{"src/index.js": "module.exports = {}", "package.json": "{\"name\": \"test\"}", "LICENSE": "MIT"}"#;
         let imp = parse_implementation_response(response, "test-pkg", "javascript").unwrap();
         assert_eq!(imp.files.len(), 3);
         assert_eq!(imp.package_name, "test-pkg");
+    }
+
+    #[test]
+    fn test_parse_implementation_response_delimiter() {
+        let response = r#"Here is the implementation:
+
+===FILE: src/index.js===
+function add(a, b) {
+    return a + b;
+}
+module.exports = { add };
+===END_FILE===
+
+===FILE: package.json===
+{
+  "name": "test",
+  "version": "1.0.0"
+}
+===END_FILE===
+
+===FILE: LICENSE===
+MIT License
+===END_FILE===
+"#;
+        let imp = parse_implementation_response(response, "test-pkg", "javascript").unwrap();
+        assert_eq!(imp.files.len(), 3);
+        assert!(imp.files["src/index.js"].contains("function add"));
+        assert!(imp.files["package.json"].contains("\"name\""));
     }
 }
