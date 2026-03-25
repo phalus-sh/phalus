@@ -56,9 +56,15 @@ pub fn strip_html_to_text(html: &str) -> String {
                     }
                     break;
                 }
-                // Keep buffer small
-                if buf.len() > close.len() + 1 {
-                    buf = buf[buf.len() - (close.len() + 1)..].to_string();
+                // Keep buffer small — use char-safe truncation
+                if buf.len() > close.len() * 4 {
+                    let keep = close.len() + 1;
+                    let drain_to = buf.char_indices()
+                        .rev()
+                        .nth(keep)
+                        .map(|(i, _)| i)
+                        .unwrap_or(0);
+                    buf = buf[drain_to..].to_string();
                 }
             }
             continue;

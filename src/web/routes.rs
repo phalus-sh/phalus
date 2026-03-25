@@ -151,7 +151,9 @@ async fn create_job(
     // Spawn background task to process packages via the real pipeline
     let state_jobs = Arc::clone(&state) as Arc<AppState>;
     tokio::spawn(async move {
+        tracing::info!("Job {} starting with {} packages", job_id_clone, parsed.packages.len());
         let app_config = PhalusConfig::with_env_overrides(PhalusConfig::load().unwrap_or_default());
+        tracing::info!("Job {} config loaded, agent_a_key set: {}", job_id_clone, !app_config.llm.agent_a_api_key.is_empty());
 
         let pipeline_config = PipelineConfig {
             license,
@@ -198,6 +200,8 @@ async fn create_job(
             total: results.len(),
             failed,
         });
+
+        tracing::info!("Job {} completed: {} processed, {} failed", job_id_clone, results.len(), failed);
 
         // Update job state
         let mut jobs = state_jobs.jobs.lock().await;
