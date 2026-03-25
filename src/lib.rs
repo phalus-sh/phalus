@@ -153,6 +153,24 @@ pub struct ValidationReport {
 }
 
 // ---------------------------------------------------------------------------
+// License template resolution
+// ---------------------------------------------------------------------------
+
+pub fn resolve_license_text(license_id: &str, year: &str, holder: &str) -> Option<String> {
+    let template = match license_id {
+        "mit" => include_str!("../licenses/mit.txt"),
+        "apache-2.0" => include_str!("../licenses/apache-2.0.txt"),
+        "bsd-2" => include_str!("../licenses/bsd-2.txt"),
+        "bsd-3" => include_str!("../licenses/bsd-3.txt"),
+        "isc" => include_str!("../licenses/isc.txt"),
+        "unlicense" => include_str!("../licenses/unlicense.txt"),
+        "cc0" => include_str!("../licenses/cc0.txt"),
+        _ => return None,
+    };
+    Some(template.replace("{year}", year).replace("{holder}", holder))
+}
+
+// ---------------------------------------------------------------------------
 // Mode / language enums
 // ---------------------------------------------------------------------------
 
