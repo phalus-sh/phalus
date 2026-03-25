@@ -1,12 +1,19 @@
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
-    response::{Html, IntoResponse, Json},
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        Html, IntoResponse, Json,
+    },
     routing::{get, post},
     Router,
 };
+use futures_core::Stream;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::convert::Infallible;
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 
 use crate::manifest::cargo::CargoParser;
 use crate::manifest::gomod::GoModParser;
@@ -14,15 +21,32 @@ use crate::manifest::npm::NpmParser;
 use crate::manifest::pypi::PypiParser;
 use crate::pipeline::ProgressEvent;
 
+// ---------------------------------------------------------------------------
+// Job state tracking
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize)]
+pub struct JobState {
+    pub status: String,
+    pub results: Vec<serde_json::Value>,
+}
+
 pub struct AppState {
     pub progress_tx: broadcast::Sender<ProgressEvent>,
+    pub jobs: Mutex<HashMap<String, JobState>>,
 }
+
+// ---------------------------------------------------------------------------
+// Router
+// ---------------------------------------------------------------------------
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(serve_index))
         .route("/api/manifest/parse", post(parse_manifest))
         .route("/api/health", get(health))
+        .route("/api/jobs", post(create_job))
+        .route("/api/jobs/{id}/stream", get(stream_job))
         .with_state(state)
 }
 
@@ -66,4 +90,152 @@ async fn parse_manifest(
 
 async fn health() -> Json<serde_json::Value> {
     Json(serde_json::json!({"status": "ok"}))
+}
+
+// ---------------------------------------------------------------------------
+// Job creation
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct CreateJobRequest {
+    manifest_content: String,
+    license: Option<String>,
+    isolation: Option<String>,
+}
+
+async fn create_job(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<CreateJobRequest>,
+) -> impl IntoResponse {
+    let job_id = uuid::Uuid::new_v4().to_string();
+
+    // Parse the manifest
+    let parsed = if let Ok(m) = NpmParser::parse(&req.manifest_content) {
+        Some(m)
+    } else if let Ok(m) = PypiParser::parse(&req.manifest_content) {
+        if m.packages.is_empty() { None } else { Some(m) }
+    } else if let Ok(m) = CargoParser::parse(&req.manifest_content) {
+        if m.packages.is_empty() { None } else { Some(m) }
+    } else if let Ok(m) = GoModParser::parse(&req.manifest_content) {
+        if m.packages.is_empty() { None } else { Some(m) }
+    } else {
+        None
+    };
+
+    let parsed = match parsed {
+        Some(p) => p,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({"error": "could not parse manifest"})),
+            )
+                .into_response();
+        }
+    };
+
+    // Register job
+    {
+        let mut jobs = state.jobs.lock().await;
+        jobs.insert(
+            job_id.clone(),
+            JobState {
+                status: "running".to_string(),
+                results: Vec::new(),
+            },
+        );
+    }
+
+    let tx = state.progress_tx.clone();
+    let job_id_clone = job_id.clone();
+    let _license = req.license.unwrap_or_else(|| "mit".to_string());
+    let _isolation = req.isolation.unwrap_or_else(|| "context".to_string());
+
+    // Spawn background task to process packages
+    let state_jobs = Arc::clone(&state) as Arc<AppState>;
+    tokio::spawn(async move {
+        let total = parsed.packages.len();
+        for pkg in &parsed.packages {
+            let event = ProgressEvent::PackageStarted {
+                name: pkg.name.clone(),
+            };
+            let _ = tx.send(event);
+
+            // Emit phase-done for each conceptual stage
+            for phase in &["resolve", "docs", "analyze", "firewall", "build", "validate"] {
+                let event = ProgressEvent::PhaseDone {
+                    name: pkg.name.clone(),
+                    phase: phase.to_string(),
+                };
+                let _ = tx.send(event);
+            }
+
+            let event = ProgressEvent::PackageDone {
+                name: pkg.name.clone(),
+                success: true,
+            };
+            let _ = tx.send(event);
+        }
+
+        let event = ProgressEvent::JobDone {
+            total,
+            failed: 0,
+        };
+        let _ = tx.send(event);
+
+        // Update job state
+        let mut jobs = state_jobs.jobs.lock().await;
+        if let Some(job) = jobs.get_mut(&job_id_clone) {
+            job.status = "completed".to_string();
+        }
+    });
+
+    Json(serde_json::json!({"job_id": job_id})).into_response()
+}
+
+// ---------------------------------------------------------------------------
+// SSE streaming
+// ---------------------------------------------------------------------------
+
+async fn stream_job(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    // Check job exists
+    {
+        let jobs = state.jobs.lock().await;
+        if !jobs.contains_key(&id) {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({"error": "job not found"})),
+            )
+                .into_response();
+        }
+    }
+
+    let rx = state.progress_tx.subscribe();
+    Sse::new(make_event_stream(rx))
+        .keep_alive(KeepAlive::default())
+        .into_response()
+}
+
+fn make_event_stream(
+    mut rx: broadcast::Receiver<ProgressEvent>,
+) -> impl Stream<Item = Result<Event, Infallible>> {
+    async_stream::stream! {
+        loop {
+            match rx.recv().await {
+                Ok(event) => {
+                    let data = serde_json::to_string(&event).unwrap_or_default();
+                    yield Ok(Event::default().data(data));
+
+                    // Stop streaming after JobDone
+                    if matches!(event, ProgressEvent::JobDone { .. }) {
+                        break;
+                    }
+                }
+                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    }
 }

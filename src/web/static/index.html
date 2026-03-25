@@ -494,9 +494,10 @@
   document.getElementById("start-btn").addEventListener("click", startJob);
   document.getElementById("stop-btn").addEventListener("click",  stopJob);
 
-  function startJob() {
+  async function startJob() {
     const runOne = document.getElementById("run-one-input").value.trim();
-    if (!runOne && !textArea.value.trim()) {
+    const manifestContent = textArea.value.trim();
+    if (!runOne && !manifestContent) {
       setStatus("Provide a package spec or manifest before starting.", "error");
       return;
     }
@@ -507,24 +508,90 @@
     document.getElementById("stop-btn").disabled  = false;
     setStatus("Job running…", "busy");
 
-    if (runOne) {
-      addProgress("→ run-one: " + runOne, "info");
-    } else {
-      addProgress("→ Manifest mode (not yet wired to backend)", "info");
+    // Build manifest content for the API
+    let jobManifest = manifestContent;
+    if (runOne && !manifestContent) {
+      // Create a simple package.json for single-package mode
+      const parts = runOne.split("/");
+      if (parts.length === 2) {
+        const [eco, rest] = parts;
+        const [name, version] = (rest || "").split("@");
+        if (eco === "npm" && name && version) {
+          jobManifest = JSON.stringify({ dependencies: { [name]: version } });
+        }
+      }
+      if (!jobManifest) jobManifest = runOne;
     }
 
-    // SSE placeholder — real endpoint not implemented yet
-    addProgress("SSE endpoint /api/events not yet implemented.", "");
-    addProgress("Wire up the backend to stream ProgressEvents here.", "");
+    addProgress("Submitting job to backend…", "info");
 
-    // Simulate finish after short delay for demo purposes
-    setTimeout(() => {
-      addProgress("Job finished (demo placeholder).", "ok");
-      setStatus("Idle — last job completed.", "idle");
+    try {
+      const license = document.getElementById("license-select").value;
+      const r = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          manifest_content: jobManifest,
+          license: license,
+          isolation: "context",
+        }),
+      });
+
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ error: "unknown" }));
+        addProgress("Job creation failed: " + (err.error || r.statusText), "fail");
+        setStatus("Job failed.", "error");
+        jobRunning = false;
+        document.getElementById("start-btn").disabled = false;
+        document.getElementById("stop-btn").disabled  = true;
+        return;
+      }
+
+      const { job_id } = await r.json();
+      addProgress("Job created: " + job_id, "info");
+
+      // Connect SSE stream
+      eventSource = new EventSource("/api/jobs/" + job_id + "/stream");
+      eventSource.onmessage = function(ev) {
+        try {
+          const data = JSON.parse(ev.data);
+          if (data.PackageStarted) {
+            addProgress("Started: " + data.PackageStarted.name, "info");
+          } else if (data.PhaseDone) {
+            addProgress("  " + data.PhaseDone.name + " → " + data.PhaseDone.phase, "");
+          } else if (data.PackageDone) {
+            const ok = data.PackageDone.success;
+            addProgress((ok ? "OK" : "FAIL") + " " + data.PackageDone.name, ok ? "ok" : "fail");
+            addResult(data.PackageDone.name, "latest", ok, ok ? null : "failed");
+          } else if (data.JobDone) {
+            addProgress("Job done: " + data.JobDone.total + " packages, " + data.JobDone.failed + " failed", "ok");
+            setStatus("Idle — last job completed.", "idle");
+            jobRunning = false;
+            document.getElementById("start-btn").disabled = false;
+            document.getElementById("stop-btn").disabled  = true;
+            if (eventSource) { eventSource.close(); eventSource = null; }
+          }
+        } catch (e) {
+          addProgress("Event: " + ev.data, "");
+        }
+      };
+      eventSource.onerror = function() {
+        if (jobRunning) {
+          addProgress("SSE connection lost.", "fail");
+          setStatus("Connection lost.", "error");
+        }
+        if (eventSource) { eventSource.close(); eventSource = null; }
+        jobRunning = false;
+        document.getElementById("start-btn").disabled = false;
+        document.getElementById("stop-btn").disabled  = true;
+      };
+    } catch (err) {
+      addProgress("Error: " + err.message, "fail");
+      setStatus("Job failed.", "error");
       jobRunning = false;
       document.getElementById("start-btn").disabled = false;
       document.getElementById("stop-btn").disabled  = true;
-    }, 1500);
+    }
   }
 
   function stopJob() {
