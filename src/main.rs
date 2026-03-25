@@ -370,13 +370,27 @@ async fn run_package(
 
     // 6b. Run generated tests if configured
     let (tests_passed, tests_failed) = if app_config.validation.run_tests {
-        match phalus::validator::test_runner::run_generated_tests(
+        // Try Docker first for sandboxed execution, fall back to local
+        let result = phalus::validator::test_runner::run_tests_in_docker(
             &implementation.target_language,
             &config.output_dir.join(&name),
         )
-        .await
-        {
-            Some(result) => (result.passed, result.failed),
+        .await;
+
+        let result = match result {
+            Some(r) => Some(r),
+            None => {
+                // Fall back to local test runner
+                phalus::validator::test_runner::run_generated_tests(
+                    &implementation.target_language,
+                    &config.output_dir.join(&name),
+                )
+                .await
+            }
+        };
+
+        match result {
+            Some(r) => (r.passed, r.failed),
             None => (0, 0),
         }
     } else {
