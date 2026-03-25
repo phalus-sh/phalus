@@ -52,6 +52,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/health", get(health))
         .route("/api/jobs", post(create_job))
         .route("/api/jobs/{id}/stream", get(stream_job))
+        .route("/api/jobs/{id}/download", get(download_job))
         .with_state(state)
 }
 
@@ -260,4 +261,76 @@ fn make_event_stream(
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// ZIP download
+// ---------------------------------------------------------------------------
+
+async fn download_job(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    // Verify job exists and is completed
+    {
+        let jobs = state.jobs.lock().await;
+        match jobs.get(&id) {
+            Some(job) if job.status == "completed" => {}
+            Some(_) => return (StatusCode::CONFLICT, "job still running").into_response(),
+            None => return (StatusCode::NOT_FOUND, "job not found").into_response(),
+        }
+    }
+
+    let output_dir = std::path::PathBuf::from("./phalus-output");
+    if !output_dir.exists() {
+        return (StatusCode::NOT_FOUND, "no output directory").into_response();
+    }
+
+    // Create ZIP in memory
+    let mut buf = std::io::Cursor::new(Vec::new());
+    {
+        let mut zip = zip::ZipWriter::new(&mut buf);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        add_dir_to_zip(&mut zip, &output_dir, &output_dir, &options).ok();
+        zip.finish().ok();
+    }
+
+    let bytes = buf.into_inner();
+    (
+        StatusCode::OK,
+        [
+            ("content-type", "application/zip"),
+            (
+                "content-disposition",
+                "attachment; filename=\"phalus-output.zip\"",
+            ),
+        ],
+        bytes,
+    )
+        .into_response()
+}
+
+fn add_dir_to_zip(
+    zip: &mut zip::ZipWriter<&mut std::io::Cursor<Vec<u8>>>,
+    base: &std::path::Path,
+    dir: &std::path::Path,
+    options: &zip::write::SimpleFileOptions,
+) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        let rel = path.strip_prefix(base).unwrap_or(&path);
+        let name = rel.to_string_lossy().to_string();
+
+        if path.is_dir() {
+            add_dir_to_zip(zip, base, &path, options)?;
+        } else if let Ok(content) = std::fs::read(&path) {
+            zip.start_file(name, *options).ok();
+            use std::io::Write;
+            zip.write_all(&content).ok();
+        }
+    }
+    Ok(())
 }

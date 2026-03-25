@@ -29,7 +29,7 @@
       min-height: 100vh;
     }
 
-    /* ── Header ────────────────────────────────────────── */
+    /* -- Header ------------------------------------------------ */
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -62,7 +62,7 @@
       color: var(--muted);
     }
 
-    /* ── Layout ─────────────────────────────────────────── */
+    /* -- Layout ------------------------------------------------- */
     main {
       max-width: 960px;
       margin: 32px auto;
@@ -76,7 +76,7 @@
       main { grid-template-columns: 1fr; }
     }
 
-    /* ── Cards ──────────────────────────────────────────── */
+    /* -- Cards -------------------------------------------------- */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -95,7 +95,7 @@
       padding-bottom: 8px;
     }
 
-    /* ── Form elements ──────────────────────────────────── */
+    /* -- Form elements ------------------------------------------ */
     label {
       display: block;
       font-size: 12px;
@@ -131,7 +131,7 @@
 
     .field { margin-bottom: 14px; }
 
-    /* ── Drop zone ──────────────────────────────────────── */
+    /* -- Drop zone ---------------------------------------------- */
     .dropzone {
       border: 2px dashed var(--border);
       border-radius: var(--radius);
@@ -151,7 +151,7 @@
 
     .dropzone span { display: block; margin-top: 4px; font-size: 11px; }
 
-    /* ── Buttons ────────────────────────────────────────── */
+    /* -- Buttons ------------------------------------------------ */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -180,7 +180,7 @@
       flex-wrap: wrap;
     }
 
-    /* ── Progress ───────────────────────────────────────── */
+    /* -- Progress ----------------------------------------------- */
     .progress-list {
       list-style: none;
       max-height: 220px;
@@ -205,7 +205,15 @@
       font-style: italic;
     }
 
-    /* ── Results ────────────────────────────────────────── */
+    /* -- Progress counter --------------------------------------- */
+    .progress-counter {
+      font-size: 12px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    /* -- Results ------------------------------------------------ */
     .results-placeholder {
       color: var(--muted);
       font-size: 12px;
@@ -213,26 +221,116 @@
       padding: 12px 0;
     }
 
-    .result-item {
+    .result-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 8px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
     }
 
-    .result-item:last-child { border-bottom: none; }
+    .result-card .pkg-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
 
-    .result-item .pkg { font-family: monospace; }
+    .result-card .pkg-name {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .result-card .pkg-meta {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .result-card .pkg-badge {
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 10px;
+      border-radius: 12px;
+      text-transform: uppercase;
+    }
+
+    .result-card .pkg-badge.pass {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent2);
+    }
+
+    .result-card .pkg-badge.fail {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--danger);
+    }
 
     .badge-pass { color: var(--accent2); font-weight: 700; font-size: 11px; }
     .badge-fail { color: var(--danger);  font-weight: 700; font-size: 11px; }
 
-    /* ── Span full width ────────────────────────────────── */
+    /* -- Download banner ---------------------------------------- */
+    .download-banner {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .download-banner .summary-text {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .download-banner .btn {
+      text-decoration: none;
+      display: inline-flex;
+    }
+
+    /* -- Parsed packages list ----------------------------------- */
+    .parsed-packages {
+      list-style: none;
+      margin-top: 8px;
+    }
+
+    .parsed-packages li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .parsed-packages li:last-child { border-bottom: none; }
+
+    .parsed-packages .eco-badge {
+      background: rgba(88, 166, 255, 0.1);
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    .parsed-packages .pkg-name {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-weight: 600;
+    }
+
+    .parsed-packages .pkg-ver {
+      color: var(--muted);
+    }
+
+    /* -- Span full width ---------------------------------------- */
     .span-2 { grid-column: 1 / -1; }
 
-    /* ── Status bar ─────────────────────────────────────── */
+    /* -- Status bar --------------------------------------------- */
     #status-bar {
       background: var(--surface);
       border-top: 1px solid var(--border);
@@ -270,14 +368,14 @@
 </head>
 <body>
 
-<!-- ── Header ──────────────────────────────────────────────── -->
+<!-- -- Header ---------------------------------------------------- -->
 <header>
   <span class="logo">PHALUS</span>
   <span class="tagline">Private Headless Automated License Uncoupling System</span>
   <span class="badge" id="health-badge">checking…</span>
 </header>
 
-<!-- ── Main grid ───────────────────────────────────────────── -->
+<!-- -- Main grid ------------------------------------------------- -->
 <main>
 
   <!-- Input card -->
@@ -345,12 +443,13 @@
   <!-- Progress card -->
   <div class="card">
     <h2>Progress</h2>
+    <div class="progress-counter" id="progress-counter" style="display:none"></div>
     <p class="progress-empty" id="progress-empty">No job running. Start a job to see progress here.</p>
     <ul class="progress-list" id="progress-list" style="display:none"></ul>
   </div>
 
-  <!-- Results card -->
-  <div class="card">
+  <!-- Results card (spans full width when active) -->
+  <div class="card" id="results-card">
     <h2>Results</h2>
     <p class="results-placeholder" id="results-empty">Results will appear here after a job completes.</p>
     <div id="results-list"></div>
@@ -358,7 +457,7 @@
 
 </main>
 
-<!-- ── Status bar ──────────────────────────────────────────── -->
+<!-- -- Status bar ------------------------------------------------ -->
 <div id="status-bar">
   <span class="dot idle" id="status-dot"></span>
   <span id="status-text">Idle — connect PHALUS to an LLM provider to run jobs</span>
@@ -367,7 +466,13 @@
 <script>
   "use strict";
 
-  // ── Health check ────────────────────────────────────────────
+  // -- State variables ------------------------------------------
+  let currentJobId = null;
+  let totalPackages = 0;
+  let processedPackages = 0;
+  let packageStartTimes = {};
+
+  // -- Health check ---------------------------------------------
   async function checkHealth() {
     try {
       const r = await fetch("/api/health");
@@ -384,7 +489,7 @@
   }
   checkHealth();
 
-  // ── Drop zone ────────────────────────────────────────────────
+  // -- Drop zone ------------------------------------------------
   const dropzone  = document.getElementById("dropzone");
   const fileInput = document.getElementById("file-input");
   const textArea  = document.getElementById("manifest-text");
@@ -412,7 +517,7 @@
     dropzone.textContent = file.name;
   }
 
-  // ── Parse manifest ───────────────────────────────────────────
+  // -- Parse manifest -------------------------------------------
   document.getElementById("parse-btn").addEventListener("click", async () => {
     const body = textArea.value.trim();
     if (!body) { setParseResult("Paste or drop a manifest first.", "warn"); return; }
@@ -423,7 +528,11 @@
         body,
       });
       const json = await r.json();
-      setParseResult("Server response: " + JSON.stringify(json), "ok");
+      if (json.error) {
+        setParseResult("Error: " + json.error, "fail");
+      } else {
+        showParsedPackages(json);
+      }
     } catch (err) {
       setParseResult("Error: " + err.message, "fail");
     }
@@ -435,7 +544,35 @@
     el.style.color = kind === "ok" ? "var(--accent2)" : kind === "fail" ? "var(--danger)" : "var(--warn)";
   }
 
-  // ── Progress helpers ─────────────────────────────────────────
+  function showParsedPackages(manifest) {
+    const el = document.getElementById("parse-result");
+    el.style.color = "var(--accent2)";
+
+    const type = manifest.manifest_type || "unknown";
+    const pkgs = manifest.packages || [];
+    totalPackages = pkgs.length;
+
+    let html = '<div style="margin-bottom:6px;color:var(--accent2);font-weight:600;">' +
+      escapeHtml(String(pkgs.length)) + ' package' + (pkgs.length !== 1 ? 's' : '') +
+      ' detected (' + escapeHtml(type) + ')</div>';
+
+    html += '<ul class="parsed-packages">';
+    for (const pkg of pkgs) {
+      const eco = pkg.ecosystem || "unknown";
+      const name = pkg.name || "?";
+      const ver = pkg.version_constraint || "*";
+      html += '<li>' +
+        '<span class="eco-badge">' + escapeHtml(eco) + '</span>' +
+        '<span class="pkg-name">' + escapeHtml(name) + '</span>' +
+        '<span class="pkg-ver">' + escapeHtml(ver) + '</span>' +
+        '</li>';
+    }
+    html += '</ul>';
+
+    el.innerHTML = html;
+  }
+
+  // -- Progress helpers -----------------------------------------
   let jobRunning = false;
   let eventSource = null;
 
@@ -451,17 +588,28 @@
     list.scrollTop = list.scrollHeight;
   }
 
+  function updateProgressCounter(current, total) {
+    const counter = document.getElementById("progress-counter");
+    counter.style.display = "";
+    counter.textContent = "Processing " + current + " of " + total + "...";
+  }
+
   function clearProgress() {
     const list  = document.getElementById("progress-list");
     const empty = document.getElementById("progress-empty");
+    const counter = document.getElementById("progress-counter");
     list.innerHTML   = "";
     list.style.display  = "none";
     empty.style.display = "";
+    counter.style.display = "none";
+    counter.textContent = "";
   }
 
   function clearResults() {
     document.getElementById("results-list").innerHTML = "";
     document.getElementById("results-empty").style.display = "";
+    // Remove span-2 from results card
+    document.getElementById("results-card").className = "card";
   }
 
   function escapeHtml(s) {
@@ -470,33 +618,36 @@
     return div.innerHTML;
   }
 
-  function addResult(pkg, version, pass, err) {
+  function addResultCard(pkg, version, pass, elapsed) {
     document.getElementById("results-empty").style.display = "none";
-    const div = document.createElement("div");
-    div.className = "result-item";
-    const badge = pass
-      ? '<span class="badge-pass">PASS</span>'
-      : '<span class="badge-fail">FAIL</span>';
-    div.innerHTML = `<span class="pkg">${escapeHtml(pkg)}@${escapeHtml(version)}</span>${badge}`;
-    if (err) {
-      const note = document.createElement("div");
-      note.style.cssText = "font-size:11px;color:var(--danger);padding-bottom:4px;";
-      note.textContent = err;
-      document.getElementById("results-list").appendChild(div);
-      document.getElementById("results-list").appendChild(note);
-    } else {
-      document.getElementById("results-list").appendChild(div);
-    }
+    // Make results span full width
+    document.getElementById("results-card").className = "card span-2";
+
+    const card = document.createElement("div");
+    card.className = "result-card";
+
+    const badgeClass = pass ? "pass" : "fail";
+    const badgeText = pass ? "PASS" : "FAIL";
+    const elapsedText = elapsed ? " — " + elapsed + "s" : "";
+
+    card.innerHTML =
+      '<div class="pkg-info">' +
+        '<span class="pkg-name">' + escapeHtml(pkg) + '@' + escapeHtml(version) + '</span>' +
+        '<span class="pkg-meta">Completed' + escapeHtml(elapsedText) + '</span>' +
+      '</div>' +
+      '<span class="pkg-badge ' + badgeClass + '">' + badgeText + '</span>';
+
+    document.getElementById("results-list").appendChild(card);
   }
 
-  // ── Status helpers ───────────────────────────────────────────
+  // -- Status helpers -------------------------------------------
   function setStatus(msg, kind) {
     document.getElementById("status-text").textContent = msg;
     const dot = document.getElementById("status-dot");
     dot.className = "dot " + (kind || "idle");
   }
 
-  // ── Start / Stop ─────────────────────────────────────────────
+  // -- Start / Stop ---------------------------------------------
   document.getElementById("start-btn").addEventListener("click", startJob);
   document.getElementById("stop-btn").addEventListener("click",  stopJob);
 
@@ -509,6 +660,9 @@
     }
 
     clearProgress();
+    clearResults();
+    processedPackages = 0;
+    packageStartTimes = {};
     jobRunning = true;
     document.getElementById("start-btn").disabled = true;
     document.getElementById("stop-btn").disabled  = false;
@@ -554,6 +708,7 @@
       }
 
       const { job_id } = await r.json();
+      currentJobId = job_id;
       addProgress("Job created: " + job_id, "info");
 
       // Connect SSE stream
@@ -562,15 +717,49 @@
         try {
           const data = JSON.parse(ev.data);
           if (data.PackageStarted) {
+            processedPackages++;
+            packageStartTimes[data.PackageStarted.name] = Date.now();
+            if (totalPackages > 0) {
+              updateProgressCounter(processedPackages, totalPackages);
+            }
             addProgress("Started: " + data.PackageStarted.name, "info");
           } else if (data.PhaseDone) {
             addProgress("  " + data.PhaseDone.name + " → " + data.PhaseDone.phase, "");
           } else if (data.PackageDone) {
             const ok = data.PackageDone.success;
-            addProgress((ok ? "OK" : "FAIL") + " " + data.PackageDone.name, ok ? "ok" : "fail");
-            addResult(data.PackageDone.name, "latest", ok, ok ? null : "failed");
-          } else if (data.JobDone) {
-            addProgress("Job done: " + data.JobDone.total + " packages, " + data.JobDone.failed + " failed", "ok");
+            const pkgName = data.PackageDone.name;
+            let elapsed = null;
+            if (packageStartTimes[pkgName]) {
+              elapsed = ((Date.now() - packageStartTimes[pkgName]) / 1000).toFixed(1);
+            }
+            addProgress((ok ? "OK" : "FAIL") + " " + pkgName + (elapsed ? " (" + elapsed + "s)" : ""), ok ? "ok" : "fail");
+            addResultCard(pkgName, "latest", ok, elapsed);
+          } else if (data.JobDone != null) {
+            const total = data.JobDone.total;
+            const failed = data.JobDone.failed;
+            addProgress("Job done: " + total + " packages, " + failed + " failed", "ok");
+
+            // Update progress counter to done
+            const counter = document.getElementById("progress-counter");
+            counter.textContent = "Completed: " + total + " packages processed";
+
+            // Insert summary banner with download button
+            const resultsDiv = document.getElementById("results-list");
+            const summary = document.createElement("div");
+            summary.className = "download-banner";
+            const failText = failed > 0
+              ? '<span style="color:var(--danger)">' + escapeHtml(String(failed)) + ' failed</span>'
+              : '<span style="color:var(--accent2)">0 failed</span>';
+            summary.innerHTML =
+              '<div class="summary-text">' +
+                escapeHtml(String(total)) + ' packages processed, ' + failText +
+              '</div>' +
+              '<a href="/api/jobs/' + escapeHtml(currentJobId) + '/download" ' +
+                 'class="btn btn-success" style="text-decoration:none;display:inline-flex;">' +
+                 'Download Output (.zip)' +
+              '</a>';
+            resultsDiv.insertBefore(summary, resultsDiv.firstChild);
+
             setStatus("Idle — last job completed.", "idle");
             jobRunning = false;
             document.getElementById("start-btn").disabled = false;
@@ -609,7 +798,7 @@
     setStatus("Idle — job stopped.", "idle");
   }
 
-  // ── Clear ─────────────────────────────────────────────────────
+  // -- Clear ----------------------------------------------------
   document.getElementById("clear-btn").addEventListener("click", () => {
     textArea.value = "";
     document.getElementById("run-one-input").value = "";
@@ -617,6 +806,10 @@
     dropzone.innerHTML = 'Drop manifest file here<span>package.json · requirements.txt · Cargo.toml · go.mod</span>';
     clearProgress();
     clearResults();
+    currentJobId = null;
+    totalPackages = 0;
+    processedPackages = 0;
+    packageStartTimes = {};
     setStatus("Idle", "idle");
   });
 </script>
