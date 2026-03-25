@@ -3,7 +3,12 @@ name = "phalus"
 version = "0.1.0"
 edition = "2021"
 license = "0BSD"
-description = "Private Headless Automated License Uncoupling System"
+description = "Private Headless Automated License Uncoupling System — AI-powered clean room software reimplementation"
+repository = "https://github.com/phalus-sh/phalus"
+homepage = "https://phalus.sh"
+readme = "README.md"
+keywords = ["clean-room", "reimplementation", "license", "ai", "llm"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
