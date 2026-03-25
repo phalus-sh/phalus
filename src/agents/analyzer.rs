@@ -46,29 +46,21 @@ pub fn parse_csp_response(
     package_name: &str,
     package_version: &str,
 ) -> Result<CspSpec, AnalyzerError> {
-    // Strip markdown code fences if present
     let trimmed = response.trim();
-    let json_str = trimmed
-        .strip_prefix("```json")
-        .or_else(|| trimmed.strip_prefix("```"))
-        .unwrap_or(trimmed)
-        .strip_suffix("```")
-        .unwrap_or(trimmed)
-        .trim();
 
-    let parsed: serde_json::Value = serde_json::from_str(json_str)
-        .map_err(|e| AnalyzerError::ParseError(e.to_string()))?;
-    let obj = parsed
-        .as_object()
-        .ok_or_else(|| AnalyzerError::ParseError("expected JSON object".into()))?;
+    // Try to extract a valid JSON object from the response.
+    // The LLM may wrap it in markdown fences or prose text.
+    let obj = extract_json_object(trimmed)
+        .ok_or_else(|| AnalyzerError::ParseError("could not find valid JSON object in response".into()))?;
 
     let mut documents = Vec::new();
     for key in CSP_KEYS {
-        let content = obj
-            .get(*key)
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
+        // Handle both string values and nested objects/arrays
+        let content = match obj.get(*key) {
+            Some(serde_json::Value::String(s)) => s.clone(),
+            Some(other) => serde_json::to_string_pretty(other).unwrap_or_default(),
+            None => String::new(),
+        };
         let content_hash = format!("{:x}", Sha256::digest(content.as_bytes()));
         let filename = if *key == "02-api-surface" || *key == "10-metadata" {
             format!("{}.json", key)
@@ -90,6 +82,26 @@ pub fn parse_csp_response(
         documents,
         generated_at: Utc::now(),
     })
+}
+
+/// Try to find and parse a valid JSON object from a string that may contain
+/// surrounding text, markdown fences, etc. Tries parsing from each `{` position.
+pub fn extract_json_object(text: &str) -> Option<serde_json::Map<String, serde_json::Value>> {
+    let mut start = 0;
+    while let Some(pos) = text[start..].find('{') {
+        let abs_pos = start + pos;
+        // Try parsing the largest possible substring from this `{`
+        // by scanning backwards from the end for `}`
+        let remainder = &text[abs_pos..];
+        if let Some(end) = remainder.rfind('}') {
+            let candidate = &remainder[..=end];
+            if let Ok(serde_json::Value::Object(map)) = serde_json::from_str(candidate) {
+                return Some(map);
+            }
+        }
+        start = abs_pos + 1;
+    }
+    None
 }
 
 pub fn system_prompt() -> &'static str {

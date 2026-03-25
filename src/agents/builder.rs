@@ -37,15 +37,16 @@ pub fn parse_implementation_response(
     target_language: &str,
 ) -> Result<Implementation, BuilderError> {
     let trimmed = response.trim();
-    let json_str = trimmed
-        .strip_prefix("```json")
-        .or_else(|| trimmed.strip_prefix("```"))
-        .unwrap_or(trimmed)
-        .strip_suffix("```")
-        .unwrap_or(trimmed)
-        .trim();
-    let parsed: HashMap<String, String> = serde_json::from_str(json_str)
-        .map_err(|e| BuilderError::ParseError(e.to_string()))?;
+    let obj = super::analyzer::extract_json_object(trimmed)
+        .ok_or_else(|| BuilderError::ParseError("could not find valid JSON object in response".into()))?;
+
+    let parsed: HashMap<String, String> = obj.into_iter().map(|(k, v)| {
+        let val = match v {
+            serde_json::Value::String(s) => s,
+            other => serde_json::to_string_pretty(&other).unwrap_or_default(),
+        };
+        (k, val)
+    }).collect();
     Ok(Implementation {
         package_name: package_name.into(),
         files: parsed,
