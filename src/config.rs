@@ -90,7 +90,7 @@ fn default_empty_string() -> String {
     String::new()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LlmConfig {
     #[serde(default = "default_agent_provider")]
@@ -123,6 +123,35 @@ impl Default for LlmConfig {
             agent_b_api_key: default_empty_string(),
             agent_b_base_url: default_empty_string(),
         }
+    }
+}
+
+impl std::fmt::Debug for LlmConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LlmConfig")
+            .field("agent_a_provider", &self.agent_a_provider)
+            .field("agent_a_model", &self.agent_a_model)
+            .field(
+                "agent_a_api_key",
+                &if self.agent_a_api_key.is_empty() {
+                    "(empty)"
+                } else {
+                    "***"
+                },
+            )
+            .field("agent_a_base_url", &self.agent_a_base_url)
+            .field("agent_b_provider", &self.agent_b_provider)
+            .field("agent_b_model", &self.agent_b_model)
+            .field(
+                "agent_b_api_key",
+                &if self.agent_b_api_key.is_empty() {
+                    "(empty)"
+                } else {
+                    "***"
+                },
+            )
+            .field("agent_b_base_url", &self.agent_b_base_url)
+            .finish()
     }
 }
 
@@ -227,7 +256,7 @@ impl Default for WebConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DocFetcherConfig {
     #[serde(default = "default_max_readme_size_kb")]
@@ -248,6 +277,24 @@ impl Default for DocFetcherConfig {
             max_code_example_lines: default_max_code_example_lines(),
             github_token: default_empty_string(),
         }
+    }
+}
+
+impl std::fmt::Debug for DocFetcherConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DocFetcherConfig")
+            .field("max_readme_size_kb", &self.max_readme_size_kb)
+            .field("max_type_def_size_kb", &self.max_type_def_size_kb)
+            .field("max_code_example_lines", &self.max_code_example_lines)
+            .field(
+                "github_token",
+                &if self.github_token.is_empty() {
+                    "(empty)"
+                } else {
+                    "***"
+                },
+            )
+            .finish()
     }
 }
 

@@ -1092,7 +1092,17 @@ fn extract_export_names(content: &str) -> Vec<String> {
 }
 
 fn cmd_config() -> Result<()> {
-    let config = PhalusConfig::with_env_overrides(PhalusConfig::load()?);
+    let mut config = PhalusConfig::with_env_overrides(PhalusConfig::load()?);
+    // Redact secrets before printing
+    if !config.llm.agent_a_api_key.is_empty() {
+        config.llm.agent_a_api_key = "***".into();
+    }
+    if !config.llm.agent_b_api_key.is_empty() {
+        config.llm.agent_b_api_key = "***".into();
+    }
+    if !config.doc_fetcher.github_token.is_empty() {
+        config.doc_fetcher.github_token = "***".into();
+    }
     let toml_str = toml::to_string_pretty(&config)?;
     println!("{}", toml_str);
     Ok(())

@@ -31,10 +31,15 @@ fn cross_firewall_context(csp: CspSpec) -> (CspSpec, AuditEvent) {
 fn cross_firewall_process(csp: CspSpec) -> (CspSpec, AuditEvent) {
     let temp_dir = std::env::temp_dir().join("phalus-firewall");
     let _ = std::fs::create_dir_all(&temp_dir);
-    let temp_path = temp_dir.join(format!(
-        "csp-{}-{}.json",
-        csp.package_name, csp.package_version
-    ));
+    let safe_name = csp
+        .package_name
+        .replace(['/', '\\'], "_")
+        .replace("..", "_");
+    let safe_version = csp
+        .package_version
+        .replace(['/', '\\'], "_")
+        .replace("..", "_");
+    let temp_path = temp_dir.join(format!("csp-{}-{}.json", safe_name, safe_version));
 
     // Serialize to disk
     let serialized = serde_json::to_string_pretty(&csp).unwrap_or_default();
@@ -67,10 +72,15 @@ fn cross_firewall_container(csp: CspSpec) -> (CspSpec, AuditEvent) {
         return cross_firewall_process(csp);
     }
 
-    let temp_path = temp_dir.join(format!(
-        "csp-{}-{}.json",
-        csp.package_name, csp.package_version
-    ));
+    let safe_name = csp
+        .package_name
+        .replace(['/', '\\'], "_")
+        .replace("..", "_");
+    let safe_version = csp
+        .package_version
+        .replace(['/', '\\'], "_")
+        .replace("..", "_");
+    let temp_path = temp_dir.join(format!("csp-{}-{}.json", safe_name, safe_version));
 
     let serialized = serde_json::to_string_pretty(&csp).unwrap_or_default();
     if let Err(e) = std::fs::write(&temp_path, &serialized) {

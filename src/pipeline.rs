@@ -93,15 +93,47 @@ pub fn filter_packages(
 // Disk output helpers
 // ---------------------------------------------------------------------------
 
+/// Validate that `target` is contained within `base`, preventing path traversal.
+fn validate_path_within(base: &Path, target: &Path) -> std::io::Result<()> {
+    let canonical_base = std::fs::canonicalize(base).unwrap_or_else(|_| base.to_path_buf());
+    let canonical_target = if target.exists() {
+        std::fs::canonicalize(target)?
+    } else {
+        // For new files, canonicalize the parent
+        let parent = target.parent().unwrap_or(base);
+        let _ = std::fs::create_dir_all(parent);
+        let canonical_parent =
+            std::fs::canonicalize(parent).unwrap_or_else(|_| parent.to_path_buf());
+        canonical_parent.join(target.file_name().unwrap_or_default())
+    };
+    if !canonical_target.starts_with(&canonical_base) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            format!(
+                "path traversal detected: {} is outside {}",
+                target.display(),
+                base.display()
+            ),
+        ));
+    }
+    Ok(())
+}
+
 pub fn write_implementation_to_disk(imp: &Implementation, output_dir: &Path) -> Result<()> {
     let pkg_dir = output_dir.join(&imp.package_name);
     std::fs::create_dir_all(&pkg_dir)?;
 
     for (filename, content) in &imp.files {
+        // Reject paths with ..
+        if filename.contains("..") {
+            tracing::warn!("skipping file with path traversal attempt: {}", filename);
+            continue;
+        }
         let file_path = pkg_dir.join(filename);
         if let Some(parent) = file_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
+        validate_path_within(&pkg_dir, &file_path)?;
         std::fs::write(&file_path, content)?;
     }
 
@@ -116,7 +148,15 @@ pub fn write_csp_to_disk(csp: &CspSpec, output_dir: &Path) -> Result<()> {
     std::fs::create_dir_all(&csp_dir)?;
 
     for doc in &csp.documents {
+        if doc.filename.contains("..") {
+            tracing::warn!(
+                "skipping CSP document with path traversal attempt: {}",
+                doc.filename
+            );
+            continue;
+        }
         let file_path = csp_dir.join(&doc.filename);
+        validate_path_within(&csp_dir, &file_path)?;
         std::fs::write(&file_path, &doc.content)?;
     }
 
