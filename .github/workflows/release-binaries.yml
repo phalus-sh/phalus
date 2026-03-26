@@ -129,7 +129,7 @@ jobs:
           path: ${{ env.ARCHIVE }}
 
   checksums:
-    name: Create checksums and upload
+    name: Create checksums, sign, and upload
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -140,11 +140,28 @@ jobs:
           pattern: binary-*
           merge-multiple: true
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.4.0
+        with:
+          cosign-release: 'v2.2.3'
+
       - name: Generate checksums
         run: |
           cd artifacts
           sha256sum * > checksums.txt
           cat checksums.txt
+
+      - name: Sign artifacts with cosign
+        run: |
+          cd artifacts
+          for file in *.tar.gz *.zip; do
+            [ -f "$file" ] || continue
+            echo "Signing $file..."
+            cosign sign-blob --yes "$file" --output-signature "${file}.sig" --output-certificate "${file}.pem"
+          done
+          cosign sign-blob --yes checksums.txt --output-signature checksums.txt.sig --output-certificate checksums.txt.pem
+        env:
+          COSIGN_EXPERIMENTAL: "1"
 
       - name: Determine tag
         id: tag
@@ -160,4 +177,14 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           files: artifacts/*
+          body: |
+            ### Verification
+
+            Each binary is signed with [Sigstore cosign](https://docs.sigstore.dev/). Verify with:
+            ```bash
+            cosign verify-blob --certificate phalus-*.pem --signature phalus-*.sig phalus-*.tar.gz \
+              --certificate-identity-regexp="https://github.com/phalus-sh/phalus" \
+              --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
+            ```
+            SHA256 checksums are in `checksums.txt` (also signed).
           append_body: true
