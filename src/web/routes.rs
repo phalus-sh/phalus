@@ -53,6 +53,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/jobs", post(create_job))
         .route("/api/jobs/{id}/stream", get(stream_job))
         .route("/api/jobs/{id}/download", get(download_job))
+        .route("/api/packages/{name}/csp", get(get_package_csp))
+        .route("/api/packages/{name}/audit", get(get_package_audit))
+        .route("/api/packages/{name}/code", get(get_package_code))
         .with_state(state)
 }
 
@@ -316,6 +319,112 @@ async fn download_job(
         bytes,
     )
         .into_response()
+}
+
+// ---------------------------------------------------------------------------
+// Package-level endpoints
+// ---------------------------------------------------------------------------
+
+async fn get_package_csp(Path(name): Path<String>) -> impl IntoResponse {
+    let manifest_path = PathBuf::from("./phalus-output")
+        .join(&name)
+        .join(".cleanroom")
+        .join("csp")
+        .join("manifest.json");
+
+    match tokio::fs::read_to_string(&manifest_path).await {
+        Ok(content) => match serde_json::from_str::<serde_json::Value>(&content) {
+            Ok(value) => Json(value).into_response(),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "invalid CSP manifest JSON"})),
+            )
+                .into_response(),
+        },
+        Err(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "CSP manifest not found"})),
+        )
+            .into_response(),
+    }
+}
+
+async fn get_package_audit(Path(name): Path<String>) -> impl IntoResponse {
+    let audit_path = PathBuf::from("./phalus-output").join("audit.jsonl");
+
+    match tokio::fs::read_to_string(&audit_path).await {
+        Ok(content) => {
+            let matching: Vec<serde_json::Value> = content
+                .lines()
+                .filter_map(|line| {
+                    let value: serde_json::Value = serde_json::from_str(line).ok()?;
+                    // Check if the event's package field contains the package name
+                    let event = value.get("event")?;
+                    let package = event.get("package")?.as_str()?;
+                    if package.contains(&name) {
+                        Some(value)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            Json(serde_json::json!(matching)).into_response()
+        }
+        Err(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "audit log not found"})),
+        )
+            .into_response(),
+    }
+}
+
+async fn get_package_code(Path(name): Path<String>) -> impl IntoResponse {
+    let pkg_dir = PathBuf::from("./phalus-output").join(&name);
+
+    if !pkg_dir.exists() {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "package output not found"})),
+        )
+            .into_response();
+    }
+
+    let mut files: HashMap<String, String> = HashMap::new();
+    if let Err(e) = collect_package_files(&pkg_dir, &pkg_dir, &mut files).await {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": format!("failed to read files: {}", e)})),
+        )
+            .into_response();
+    }
+
+    Json(serde_json::json!(files)).into_response()
+}
+
+/// Recursively collect all files from a package directory, excluding `.cleanroom/`.
+async fn collect_package_files(
+    base: &std::path::Path,
+    dir: &std::path::Path,
+    files: &mut HashMap<String, String>,
+) -> std::io::Result<()> {
+    let mut entries = tokio::fs::read_dir(dir).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        let path = entry.path();
+        let rel = path.strip_prefix(base).unwrap_or(&path);
+        let rel_str = rel.to_string_lossy().to_string();
+
+        // Skip .cleanroom directory
+        if rel_str.starts_with(".cleanroom") {
+            continue;
+        }
+
+        if path.is_dir() {
+            Box::pin(collect_package_files(base, &path, files)).await?;
+        } else if let Ok(content) = tokio::fs::read_to_string(&path).await {
+            files.insert(rel_str, content);
+        }
+    }
+    Ok(())
 }
 
 fn add_dir_to_zip(
