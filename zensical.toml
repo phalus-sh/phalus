@@ -1,0 +1,62 @@
+[project]
+site_name = "PHALUS Documentation"
+copyright = "Copyright &copy; 2026 PHALUS Project. Licensed under 0BSD."
+site_url = "https://docs.phalus.sh/"
+site_description = "Private Headless Automated License Uncoupling System — AI-powered clean room software reimplementation."
+repo_url = "https://github.com/phalus-sh/phalus"
+repo_name = "phalus-sh/phalus"
+nav = [
+  {"Home" = "index.md"},
+  {"Getting Started" = "getting-started.md"},
+  {"Pipeline" = "pipeline.md"},
+  {"CLI Reference" = "cli-reference.md"},
+  {"Web UI" = "web-ui.md"},
+  {"Configuration" = "configuration.md"},
+  {"Audit Trail" = "audit-trail.md"},
+  {"Ecosystems" = "ecosystems.md"},
+  {"Docker" = "docker.md"},
+  {"Security" = "security.md"},
+  {"Ethics" = "ethics.md"},
+  {"API Reference" = "api-reference.md"},
+  {"phalus.sh" = "https://phalus.sh"},
+]
+
+extra_css = ["stylesheets/extra.css"]
+
+[project.theme]
+language = "en"
+
+# Dark mode default with red accent matching phalus.sh
+[[project.theme.palette]]
+scheme = "slate"
+primary = "red"
+accent = "red"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+scheme = "default"
+primary = "red"
+accent = "red"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to dark mode"
+
+[project.theme.features]
+navigation = ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer"]
+search = ["search.suggest", "search.highlight"]
+content = ["content.code.copy"]
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/phalus-sh/phalus"
+name = "PHALUS on GitHub"
+
+[[project.extra.social]]
+icon = "fontawesome/solid/globe"
+link = "https://phalus.sh"
+name = "phalus.sh"
+
+[[project.extra.social]]
+icon = "fontawesome/solid/cube"
+link = "https://crates.io/crates/phalus"
+name = "crates.io"

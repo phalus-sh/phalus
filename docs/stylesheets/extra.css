@@ -1,0 +1,19 @@
+/* PHALUS red theme overrides */
+:root {
+  --md-primary-fg-color: #ff3e3e;
+  --md-accent-fg-color: #ff6b35;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #ff3e3e;
+  --md-accent-fg-color: #ff6b35;
+}
+
+/* Mermaid diagrams */
+.mermaid svg {
+  max-width: 100% !important;
+}
+.mermaid {
+  overflow-x: auto;
+  text-align: center;
+}
