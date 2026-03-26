@@ -30,6 +30,8 @@ async-stream = "0.3"
 futures-core = "0.3"
 axum = "0.8"
 zip = "2"
+flate2 = "1"
+tar = "0.4"
 openssl = { version = "0.10", features = ["vendored"], optional = true }
 
 [features]

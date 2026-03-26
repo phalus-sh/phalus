@@ -464,8 +464,34 @@ pub async fn run_package(
         })
         .all(|(_, content)| license_check::check_license_header(content, &config.license));
     let license_ok = license_check::check_license_file(&implementation.files) && header_ok;
-    let sim =
-        similarity::compute_similarity("", &generated_code, &[], &[], config.similarity_threshold);
+
+    // Fetch original source for similarity comparison (validator only, never shown to agents)
+    let original_source =
+        similarity::fetch_original_source(&metadata.name, &metadata.version, &metadata.ecosystem)
+            .await
+            .unwrap_or_default();
+
+    // Log original source fetch
+    let source_fetched = !original_source.is_empty();
+    if let Err(e) = audit.lock().await.log(AuditEvent::OriginalSourceFetched {
+        package: format!("{}@{}", metadata.name, metadata.version),
+        source_length: original_source.len(),
+        fetched: source_fetched,
+    }) {
+        tracing::error!("audit log failure: {}", e);
+    }
+
+    // Extract function names from original and generated
+    let original_names = extract_function_names(&original_source);
+    let generated_names = extract_function_names(&generated_code);
+
+    let sim = similarity::compute_similarity(
+        &original_source,
+        &generated_code,
+        &original_names,
+        &generated_names,
+        config.similarity_threshold,
+    );
 
     // Syntax check (skip gracefully if the check tool isn't installed)
     let syntax_ok = run_syntax_check(
@@ -623,6 +649,23 @@ pub async fn fetch_docs(
         }
     }
 
+    // For npm packages, try to fetch type definitions from DefinitelyTyped
+    if metadata.ecosystem == Ecosystem::Npm {
+        match crate::docs::type_defs::fetch_definitely_typed(&metadata.name).await {
+            Some(type_docs) => {
+                tracing::info!(
+                    "[{}] fetched {} type definitions from DefinitelyTyped",
+                    metadata.name,
+                    type_docs.len()
+                );
+                documents.extend(type_docs);
+            }
+            None => {
+                tracing::debug!("[{}] no DefinitelyTyped definitions found", metadata.name);
+            }
+        }
+    }
+
     let mut hasher = Sha256::new();
     for doc in &documents {
         hasher.update(doc.content_hash.as_bytes());
@@ -733,6 +776,42 @@ pub async fn run_agent_b(
     }
 
     Ok(implementation)
+}
+
+// ---------------------------------------------------------------------------
+// Helper: extract function names from source code
+// ---------------------------------------------------------------------------
+
+fn extract_function_names(code: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    for line in code.lines() {
+        let trimmed = line.trim();
+        // JS: function foo(
+        if let Some(rest) = trimmed.strip_prefix("function ") {
+            if let Some(name) = rest.split('(').next() {
+                let name = name.trim();
+                if !name.is_empty() {
+                    names.push(name.to_string());
+                }
+            }
+        }
+        // module.exports.foo or exports.foo
+        if trimmed.contains("exports.") {
+            if let Some(after) = trimmed.split("exports.").nth(1) {
+                if let Some(name) = after
+                    .split(|c: char| !c.is_alphanumeric() && c != '_')
+                    .next()
+                {
+                    if !name.is_empty() {
+                        names.push(name.to_string());
+                    }
+                }
+            }
+        }
+    }
+    names.sort();
+    names.dedup();
+    names
 }
 
 // ---------------------------------------------------------------------------

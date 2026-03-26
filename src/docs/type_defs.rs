@@ -32,6 +32,63 @@ pub fn type_defs_to_doc_entries(filtered: &[(String, String)], source_url: &str)
         .collect()
 }
 
+/// Fetch type definitions from DefinitelyTyped when the npm package doesn't
+/// include its own `.d.ts` files.
+pub async fn fetch_definitely_typed(package_name: &str) -> Option<Vec<DocEntry>> {
+    let client = reqwest::Client::new();
+    // DefinitelyTyped types are published as @types/package-name
+    let types_name = format!("@types/{}", package_name);
+    let url = format!(
+        "https://registry.npmjs.org/{}/latest",
+        types_name.replace('/', "%2F")
+    );
+
+    let resp = client.get(&url).send().await.ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+
+    let body: serde_json::Value = resp.json().await.ok()?;
+    let tarball_url = body.get("dist")?.get("tarball")?.as_str()?;
+
+    // Fetch tarball and extract .d.ts files
+    let tarball_resp = client.get(tarball_url).send().await.ok()?;
+    let bytes = tarball_resp.bytes().await.ok()?;
+
+    extract_dts_from_tarball(&bytes, package_name)
+}
+
+fn extract_dts_from_tarball(bytes: &[u8], package_name: &str) -> Option<Vec<DocEntry>> {
+    use flate2::read::GzDecoder;
+    use std::io::Read;
+
+    let decoder = GzDecoder::new(bytes);
+    let mut archive = tar::Archive::new(decoder);
+    let mut entries = Vec::new();
+
+    for entry in archive.entries().ok()? {
+        let mut entry = entry.ok()?;
+        let path = entry.path().ok()?.to_string_lossy().to_string();
+        if path.ends_with(".d.ts") {
+            let mut content = String::new();
+            entry.read_to_string(&mut content).ok()?;
+            let content_hash = format!("{:x}", Sha256::digest(content.as_bytes()));
+            entries.push(DocEntry {
+                name: path.rsplit('/').next().unwrap_or(&path).to_string(),
+                content,
+                source_url: Some(format!("@types/{}", package_name)),
+                content_hash,
+            });
+        }
+    }
+
+    if entries.is_empty() {
+        None
+    } else {
+        Some(entries)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -130,6 +130,7 @@ pub struct SimilarityReport {
     pub token_similarity: f64,
     pub name_overlap: f64,
     pub string_overlap: f64,
+    pub structural_similarity: f64,
     pub overall_score: f64,
     pub threshold: f64,
 }

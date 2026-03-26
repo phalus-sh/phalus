@@ -61,6 +61,11 @@ pub enum AuditEvent {
         similarity_score: f64,
         verdict: String,
     },
+    OriginalSourceFetched {
+        package: String,
+        source_length: usize,
+        fetched: bool,
+    },
     SpecCacheHit {
         package: String,
         spec_hashes: HashMap<String, String>,
