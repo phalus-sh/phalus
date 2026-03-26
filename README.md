@@ -20,11 +20,11 @@ Pre-built binaries for Linux (x86_64, aarch64), macOS (Apple Silicon), and Windo
 
 ```sh
 # Linux (x86_64)
-curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.1.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.2.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
 sudo mv phalus /usr/local/bin/
 
 # macOS (Apple Silicon)
-curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.1.0-aarch64-apple-darwin.tar.gz | tar xz
+curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.2.0-aarch64-apple-darwin.tar.gz | tar xz
 sudo mv phalus /usr/local/bin/
 ```
 
