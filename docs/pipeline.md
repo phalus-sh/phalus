@@ -202,6 +202,37 @@ A `validation_completed` audit event records all scores and the verdict. The ful
 
 ---
 
+## Split Pipeline
+
+The pipeline can be split into two independent steps, allowing human review or programmatic modification of the CSP between Agent A and Agent B:
+
+1. **`--dry-run`** runs stages 1–5 (manifest parsing through firewall crossing) and writes the CSP to disk. Agent B is not invoked.
+2. **`phalus build`** runs stage 6 (Agent B) from an existing CSP on disk, without re-running Agent A.
+
+This split is useful for:
+
+- **Reviewing specifications** before committing to code generation
+- **Injecting custom constraints** (e.g. security requirements) into the CSP documents
+- **Reusing a single CSP** to generate implementations in multiple languages
+- **CI/CD pipelines** where spec generation and code generation are separate stages
+
+```bash
+# Stage 1-5: Generate CSP only
+phalus run-one npm/lodash@4.17.21 --dry-run
+
+# (optional) Modify the CSP
+$EDITOR ./phalus-output/lodash/.cleanroom/csp/03-behavior-spec.md
+
+# Stage 6: Build from CSP
+phalus build ./phalus-output/lodash/.cleanroom/csp/
+```
+
+The CSP is a set of plain-text files (Markdown, JSON, TypeScript definitions) stored at `<output>/<package>/.cleanroom/csp/`. The `manifest.json` file in that directory is the machine-readable index that `phalus build` reads. You can modify either the individual files or the `manifest.json` directly.
+
+See the [Cookbook](cookbook.md) for detailed examples including programmatic CSP modification with `jq` and Python.
+
+---
+
 ## Concurrency
 
 When processing a manifest with multiple packages, PHALUS runs up to `concurrency` packages in parallel (default 3). Each package runs the complete 7-stage pipeline independently. The audit logger is shared across parallel tasks using a mutex.

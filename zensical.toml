@@ -10,6 +10,7 @@ nav = [
   {"Getting Started" = "getting-started.md"},
   {"Pipeline" = "pipeline.md"},
   {"CLI Reference" = "cli-reference.md"},
+  {"Cookbook" = "cookbook.md"},
   {"Web UI" = "web-ui.md"},
   {"Configuration" = "configuration.md"},
   {"Audit Trail" = "audit-trail.md"},

@@ -87,6 +87,23 @@ enum Commands {
         #[arg(long)]
         csp: bool,
     },
+    /// Build from an existing CSP (run Agent B only)
+    Build {
+        /// Path to a CSP manifest.json or CSP directory containing manifest.json
+        csp: PathBuf,
+        #[arg(long, default_value = "mit")]
+        license: String,
+        #[arg(long, default_value = "./phalus-output")]
+        output: PathBuf,
+        #[arg(long)]
+        target_lang: Option<String>,
+        #[arg(long, default_value = "context")]
+        isolation: String,
+        #[arg(long, default_value_t = 0.70)]
+        similarity_threshold: f64,
+        #[arg(long)]
+        verbose: bool,
+    },
     /// Validate an existing output
     Validate {
         output_dir: PathBuf,
@@ -287,6 +304,67 @@ async fn cmd_run_one(package_spec: String, config: PipelineConfig) -> Result<()>
         }
         std::process::exit(1);
     }
+
+    Ok(())
+}
+
+async fn cmd_build(csp_path: PathBuf, config: PipelineConfig) -> Result<()> {
+    let app_config = PhalusConfig::with_env_overrides(PhalusConfig::load()?);
+
+    // Resolve the manifest.json path
+    let manifest_path = if csp_path.is_dir() {
+        csp_path.join("manifest.json")
+    } else {
+        csp_path
+    };
+
+    if !manifest_path.exists() {
+        anyhow::bail!(
+            "CSP manifest not found: {}. Expected a manifest.json file or a directory containing one.",
+            manifest_path.display()
+        );
+    }
+
+    let content = std::fs::read_to_string(&manifest_path)
+        .with_context(|| format!("failed to read {}", manifest_path.display()))?;
+    let csp: phalus::CspSpec = serde_json::from_str(&content)
+        .with_context(|| format!("failed to parse CSP manifest: {}", manifest_path.display()))?;
+
+    println!(
+        "Building {}@{} from CSP ({} documents)",
+        csp.package_name,
+        csp.package_version,
+        csp.documents.len()
+    );
+
+    std::fs::create_dir_all(&config.output_dir)?;
+
+    let audit_path = config.output_dir.join("audit.jsonl");
+    let audit_logger = AuditLogger::new(audit_path)?;
+    let audit = Arc::new(Mutex::new(audit_logger));
+
+    // Firewall crossing (the CSP is already on disk, but we still log the event)
+    let (csp, fw_event) = phalus::firewall::cross_firewall(csp, &config.isolation_mode).await;
+    if let Err(e) = audit.lock().await.log(fw_event) {
+        tracing::error!("audit log failure: {}", e);
+    }
+
+    // Run Agent B
+    let target_lang = phalus::pipeline::resolve_target_lang(&config.target_lang);
+
+    let implementation =
+        phalus::pipeline::run_agent_b(&csp, &config.license, &target_lang, &app_config, &audit)
+            .await?;
+
+    // Write output
+    phalus::pipeline::write_implementation_to_disk(&implementation, &config.output_dir)?;
+    phalus::pipeline::write_csp_to_disk(&csp, &config.output_dir)?;
+
+    println!("OK {}@{}", csp.package_name, csp.package_version);
+    println!(
+        "Output: {}",
+        config.output_dir.join(&csp.package_name).display()
+    );
 
     Ok(())
 }
@@ -562,6 +640,30 @@ async fn main() -> Result<()> {
                 dry_run: false,
             };
             cmd_run_one(package, config).await
+        }
+
+        Commands::Build {
+            csp,
+            license,
+            output,
+            target_lang,
+            isolation,
+            similarity_threshold,
+            verbose,
+        } => {
+            if verbose {
+                tracing::info!("verbose mode enabled");
+            }
+            let config = PipelineConfig {
+                license,
+                output_dir: output,
+                target_lang,
+                isolation_mode: isolation,
+                similarity_threshold,
+                concurrency: 1,
+                dry_run: false,
+            };
+            cmd_build(csp, config).await
         }
 
         Commands::Inspect {

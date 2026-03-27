@@ -90,3 +90,4 @@ docker run --rm -v "$PWD":/work -w /work ghcr.io/phalus-project/phalus run packa
 [Get started](getting-started.md){ .md-button .md-button--primary }
 [Pipeline explained](pipeline.md){ .md-button }
 [CLI reference](cli-reference.md){ .md-button }
+[Cookbook](cookbook.md){ .md-button }

@@ -17,6 +17,7 @@ Run `phalus --help` for a summary or `phalus [COMMAND] --help` for per-command h
 | [`plan`](#plan) | Parse a manifest and show what would be processed |
 | [`run`](#run) | Run the full clean room pipeline from a manifest |
 | [`run-one`](#run-one) | Run the pipeline on a single package without a manifest |
+| [`build`](#build) | Run Agent B only from an existing CSP |
 | [`inspect`](#inspect) | Inspect a completed job's output directory |
 | [`validate`](#validate) | Re-run validation on an existing output directory |
 | [`config`](#config) | Print the active configuration (API keys redacted) |
@@ -95,7 +96,7 @@ phalus run <MANIFEST> [OPTIONS]
 | `--isolation <mode>` | `context` | Isolation strategy: `context`, `process`, `container` |
 | `--similarity-threshold <f>` | `0.70` | Similarity score above which a package is flagged as FAIL |
 | `--concurrency <n>` | `3` | Number of packages to process in parallel |
-| `--dry-run` | false | Run Agent A only (produce CSP specs), skip Agent B and validation |
+| `--dry-run` | false | Run Agent A only — produce CSP specs, skip Agent B and validation. Use with [`build`](#build) for a split workflow. |
 | `--verbose` | false | Enable verbose logging |
 
 ### Exit codes
@@ -120,8 +121,12 @@ phalus run package.json --only lodash,express
 # Reimplement JavaScript packages in Rust
 phalus run package.json --target-lang rust --license apache-2.0
 
-# Dry run: produce specs only, no code generation
+# Dry run: trigger Agent A only, produce CSP specs without code generation
 phalus run package.json --dry-run
+
+# Dry run a single package, then build from the CSP later
+phalus run-one npm/lodash@4.17.21 --dry-run
+phalus build ./phalus-output/lodash/.cleanroom/csp/
 
 # Stricter similarity threshold
 phalus run package.json --similarity-threshold 0.50
@@ -172,6 +177,66 @@ phalus run-one npm/chalk@5.3.0 --target-lang rust --license mit
 
 phalus run-one crates/serde@1.0.193 --isolation process
 ```
+
+---
+
+## build
+
+Run Agent B (Builder) from an existing Clean Room Specification Pack without re-running Agent A. This is the second half of the split pipeline workflow:
+
+1. Generate a CSP with `--dry-run` (Agent A only)
+2. Optionally review or modify the CSP files on disk
+3. Run `build` to implement from the CSP (Agent B only)
+
+```
+phalus build <CSP> [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `CSP` | Path to a CSP `manifest.json` file, **or** a directory containing one (e.g. `./phalus-output/lodash/.cleanroom/csp/`) |
+
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--license <id>` | `mit` | SPDX license identifier for the generated code |
+| `--output <dir>` | `./phalus-output` | Output directory |
+| `--target-lang <lang>` | Same as source | Target language: `rust`, `go`, `python`, `typescript` |
+| `--isolation <mode>` | `context` | Isolation mode: `context`, `process`, `container` |
+| `--similarity-threshold <f>` | `0.70` | Similarity threshold |
+| `--verbose` | false | Enable verbose logging |
+
+### Examples
+
+```bash
+# Build from a CSP directory (looks for manifest.json inside)
+phalus build ./phalus-output/lodash/.cleanroom/csp/
+
+# Build from a specific manifest.json
+phalus build ./my-specs/lodash-csp/manifest.json --license apache-2.0
+
+# Build in a different language
+phalus build ./phalus-output/chalk/.cleanroom/csp/ --target-lang rust
+
+# Full split workflow: generate CSP, review it, then build
+phalus run-one npm/express@4.18.2 --dry-run
+# ... inspect and optionally edit the CSP files ...
+phalus build ./phalus-output/express/.cleanroom/csp/ --license mit
+```
+
+### Split pipeline workflow
+
+The `build` command enables a split pipeline where Agent A and Agent B run as separate steps. This is useful for:
+
+- **Reviewing the CSP** before committing to implementation
+- **Injecting custom constraints** into the specification (e.g. security requirements in `03-behavior-spec.md` or `04-edge-cases.md`)
+- **Reusing a CSP** to generate implementations in multiple languages
+- **Iterating on the implementation** without re-running analysis
+
+See the [Cookbook](cookbook.md) for detailed examples of these workflows.
 
 ---
 

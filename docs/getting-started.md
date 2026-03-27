@@ -195,8 +195,29 @@ phalus-output/
 
 ---
 
+## Split pipeline: Agent A and Agent B separately
+
+You can run Agent A (spec generation) and Agent B (code implementation) as separate steps. This allows you to review, edit, or programmatically modify the specification before building.
+
+```bash
+# Step 1: Generate CSP only (Agent A)
+phalus run-one npm/lodash@4.17.21 --dry-run
+
+# Step 2: Review the specification
+phalus inspect ./phalus-output --csp
+cat ./phalus-output/lodash/.cleanroom/csp/03-behavior-spec.md
+
+# Step 3: Build from the CSP (Agent B)
+phalus build ./phalus-output/lodash/.cleanroom/csp/
+```
+
+See the [Cookbook](cookbook.md) for advanced workflows including injecting custom security constraints and batch processing with review gates.
+
+---
+
 ## Next Steps
 
+- [Cookbook — split pipeline, CSP modification, and automation recipes](cookbook.md)
 - [Pipeline explained in detail](pipeline.md)
 - [Full CLI reference](cli-reference.md)
 - [Configuration reference](configuration.md)
