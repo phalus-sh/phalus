@@ -4,6 +4,8 @@
 
 No user accounts. No payments. No SaaS. You run it on your own machine with your own API keys.
 
+[Documentation](https://docs.phalus.sh) | [Website](https://phalus.sh) | [crates.io](https://crates.io/crates/phalus)
+
 ![PHALUS Web UI](docs/images/web-ui.png)
 
 ## Install
