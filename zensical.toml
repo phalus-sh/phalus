@@ -26,6 +26,8 @@ extra_css = ["stylesheets/extra.css"]
 
 [project.theme]
 language = "en"
+logo = "images/logo.png"
+favicon = "images/logo.png"
 
 # Dark mode default with red accent matching phalus.sh
 [[project.theme.palette]]
