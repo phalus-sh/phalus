@@ -366,7 +366,15 @@ async fn cmd_build(csp_path: PathBuf, config: PipelineConfig) -> Result<()> {
     let audit = Arc::new(Mutex::new(audit_logger));
 
     // Firewall crossing (the CSP is already on disk, but we still log the event)
-    let (csp, fw_event) = phalus::firewall::cross_firewall(csp, &config.isolation_mode).await;
+    let container_cfg = phalus::firewall::ContainerConfig {
+        image: app_config.isolation.docker_image.clone(),
+        memory_limit: app_config.isolation.memory_limit.clone(),
+        cpu_limit: app_config.isolation.cpu_limit.clone(),
+        timeout_secs: app_config.isolation.timeout_secs,
+        network_mode: app_config.isolation.network_mode.clone(),
+        pids_limit: app_config.isolation.pids_limit,
+    };
+    let (csp, fw_event) = phalus::firewall::cross_firewall(csp, &config.isolation_mode, &container_cfg).await;
     if let Err(e) = audit.lock().await.log(fw_event) {
         tracing::error!("audit log failure: {}", e);
     }
