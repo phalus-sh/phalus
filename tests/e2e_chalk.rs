@@ -82,7 +82,9 @@ fn test_chalk_csp_output_structure() {
             },
             CspDocument {
                 filename: "02-api-surface.json".into(),
-                content: r#"{"chalk": {"red": "Chainable", "bold": "Chainable", "blue": "Chainable"}}"#.into(),
+                content:
+                    r#"{"chalk": {"red": "Chainable", "bold": "Chainable", "blue": "Chainable"}}"#
+                        .into(),
                 content_hash: "ddd".into(),
             },
             CspDocument {

@@ -362,7 +362,8 @@ pub async fn run_package(
         network_mode: app_config.isolation.network_mode.clone(),
         pids_limit: app_config.isolation.pids_limit,
     };
-    let (csp, fw_event) = firewall::cross_firewall(csp, &config.isolation_mode, &container_cfg).await;
+    let (csp, fw_event) =
+        firewall::cross_firewall(csp, &config.isolation_mode, &container_cfg).await;
     if let Err(e) = audit.lock().await.log(fw_event) {
         tracing::error!("audit log failure: {}", e);
     }
@@ -707,7 +708,12 @@ pub async fn run_agent_a(
     } else {
         Some(config.llm.agent_a_base_url.as_str())
     };
-    let provider = LlmProvider::new(api_key, &config.llm.agent_a_model, base_url, config.llm.retry.clone());
+    let provider = LlmProvider::new(
+        api_key,
+        &config.llm.agent_a_model,
+        base_url,
+        config.llm.retry.clone(),
+    );
 
     let system = analyzer::system_prompt();
     let user_prompt = analyzer::build_analyzer_prompt(docs);
@@ -756,7 +762,12 @@ pub async fn run_agent_b(
     } else {
         Some(config.llm.agent_b_base_url.as_str())
     };
-    let provider = LlmProvider::new(api_key, &config.llm.agent_b_model, base_url, config.llm.retry.clone());
+    let provider = LlmProvider::new(
+        api_key,
+        &config.llm.agent_b_model,
+        base_url,
+        config.llm.retry.clone(),
+    );
 
     let system = builder::system_prompt();
     let user_prompt = builder::build_builder_prompt(csp, license, target_lang);
