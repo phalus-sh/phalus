@@ -22,11 +22,11 @@ Pre-built binaries for Linux (x86_64, aarch64), macOS (Apple Silicon), and Windo
 
 ```sh
 # Linux (x86_64)
-curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.2.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.4.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
 sudo mv phalus /usr/local/bin/
 
 # macOS (Apple Silicon)
-curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.2.0-aarch64-apple-darwin.tar.gz | tar xz
+curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.4.0-aarch64-apple-darwin.tar.gz | tar xz
 sudo mv phalus /usr/local/bin/
 ```
 
@@ -135,8 +135,19 @@ agent_b_provider = "anthropic"
 agent_b_model = "claude-sonnet-4-6"
 agent_b_api_key = ""
 
+[llm.retry]
+max_retries = 3
+initial_backoff_ms = 500
+timeout_secs = 120
+
 [isolation]
 mode = "context"    # context | process | container
+docker_image = "alpine:3"
+memory_limit = "256m"
+cpu_limit = "1.0"
+timeout_secs = 60
+network_mode = "none"
+pids_limit = 64
 
 [limits]
 max_packages_per_job = 50

@@ -53,6 +53,16 @@ agent_b_api_key = ""
 # Optional base URL override for Agent B.
 agent_b_base_url = ""
 
+[llm.retry]
+# Maximum number of retry attempts (not counting the initial request).
+max_retries = 3
+
+# Initial backoff in milliseconds; doubles on each retry.
+initial_backoff_ms = 500
+
+# Per-request timeout in seconds.
+timeout_secs = 120
+
 
 [isolation]
 # Isolation strategy between Agent A and Agent B.
@@ -60,6 +70,24 @@ agent_b_base_url = ""
 # process   — Separate OS processes with no shared memory.
 # container — Separate Docker containers with no network overlap.
 mode = "context"
+
+# Docker image for container isolation mode
+docker_image = "alpine:3"
+
+# Memory limit for the isolation container
+memory_limit = "256m"
+
+# CPU limit for the isolation container
+cpu_limit = "1.0"
+
+# Seconds before the container run is killed
+timeout_secs = 60
+
+# Docker network mode ("none" for full isolation)
+network_mode = "none"
+
+# Maximum PIDs inside the isolation container
+pids_limit = 64
 
 
 [limits]
@@ -149,12 +177,21 @@ Controls the LLM provider, model, and API credentials for each agent. Agent A an
 | `agent_b_model` | string | `claude-sonnet-4-6` | Model identifier |
 | `agent_b_api_key` | string | `""` | API key (required) |
 | `agent_b_base_url` | string | `""` | Custom base URL (optional) |
+| `retry.max_retries` | integer | `3` | Max retry attempts per LLM request |
+| `retry.initial_backoff_ms` | integer | `500` | Initial backoff (doubles each retry) |
+| `retry.timeout_secs` | integer | `120` | Per-request timeout in seconds |
 
 ### `[isolation]`
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `mode` | string | `context` | `context`, `process`, or `container` |
+| `docker_image` | string | `alpine:3` | Docker image for container mode |
+| `memory_limit` | string | `256m` | Container memory limit |
+| `cpu_limit` | string | `1.0` | Container CPU limit |
+| `timeout_secs` | integer | `60` | Container timeout in seconds |
+| `network_mode` | string | `none` | Docker network mode |
+| `pids_limit` | integer | `64` | Max PIDs in container |
 
 ### `[limits]`
 
@@ -215,7 +252,16 @@ Pattern: `PHALUS_<SECTION>__<KEY>`
 | `PHALUS_LLM__AGENT_A_PROVIDER` | `llm.agent_a_provider` |
 | `PHALUS_LLM__AGENT_A_BASE_URL` | `llm.agent_a_base_url` |
 | `PHALUS_LLM__AGENT_B_BASE_URL` | `llm.agent_b_base_url` |
+| `PHALUS_LLM__RETRY_MAX_RETRIES` | `llm.retry.max_retries` |
+| `PHALUS_LLM__RETRY_INITIAL_BACKOFF_MS` | `llm.retry.initial_backoff_ms` |
+| `PHALUS_LLM__RETRY_TIMEOUT_SECS` | `llm.retry.timeout_secs` |
 | `PHALUS_ISOLATION__MODE` | `isolation.mode` |
+| `PHALUS_ISOLATION__DOCKER_IMAGE` | `isolation.docker_image` |
+| `PHALUS_ISOLATION__MEMORY_LIMIT` | `isolation.memory_limit` |
+| `PHALUS_ISOLATION__CPU_LIMIT` | `isolation.cpu_limit` |
+| `PHALUS_ISOLATION__TIMEOUT_SECS` | `isolation.timeout_secs` |
+| `PHALUS_ISOLATION__NETWORK_MODE` | `isolation.network_mode` |
+| `PHALUS_ISOLATION__PIDS_LIMIT` | `isolation.pids_limit` |
 | `PHALUS_LIMITS__MAX_PACKAGES_PER_JOB` | `limits.max_packages_per_job` |
 | `PHALUS_LIMITS__CONCURRENCY` | `limits.concurrency` |
 | `PHALUS_VALIDATION__SIMILARITY_THRESHOLD` | `validation.similarity_threshold` |

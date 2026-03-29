@@ -89,6 +89,7 @@ phalus run <MANIFEST> [OPTIONS]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--license <id>` | `mit` | SPDX license identifier for the generated code. Options: `mit`, `apache-2.0`, `bsd-2`, `bsd-3`, `isc`, `unlicense`, `cc0` |
+| `--license-file <path>` | — | Path to a file containing full license text (overrides `--license`) |
 | `--output <dir>` | `./phalus-output` | Directory to write generated packages |
 | `--only <pkg1,pkg2,...>` | — | Process only these packages |
 | `--exclude <pkg1,pkg2,...>` | — | Skip these packages |
@@ -158,6 +159,7 @@ Supported ecosystems: `npm`, `pypi`, `crates`, `go`.
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--license <id>` | `mit` | SPDX license identifier |
+| `--license-file <path>` | — | Path to a file containing full license text (overrides `--license`) |
 | `--output <dir>` | `./phalus-output` | Output directory |
 | `--target-lang <lang>` | Same as source | Target language: `rust`, `go`, `python`, `typescript` |
 | `--isolation <mode>` | `context` | Isolation mode: `context`, `process`, `container` |
@@ -203,6 +205,7 @@ phalus build <CSP> [OPTIONS]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--license <id>` | `mit` | SPDX license identifier for the generated code |
+| `--license-file <path>` | — | Path to a file containing full license text (overrides `--license`) |
 | `--output <dir>` | `./phalus-output` | Output directory |
 | `--target-lang <lang>` | Same as source | Target language: `rust`, `go`, `python`, `typescript` |
 | `--isolation <mode>` | `context` | Isolation mode: `context`, `process`, `container` |

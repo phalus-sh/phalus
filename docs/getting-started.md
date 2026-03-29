@@ -28,11 +28,11 @@ phalus --version
 
 ### Option 2 — Pre-built binary
 
-Download the appropriate archive from the [releases page](https://github.com/phalus-project/phalus/releases):
+Download the appropriate archive from the [releases page](https://github.com/phalus-sh/phalus/releases):
 
 ```bash
 # Linux x86_64 example
-curl -L https://github.com/phalus-project/phalus/releases/latest/download/phalus-linux-x86_64.tar.gz \
+curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-linux-x86_64.tar.gz \
   | tar xz
 sudo mv phalus /usr/local/bin/
 phalus --version
@@ -41,7 +41,7 @@ phalus --version
 ### Option 3 — Docker
 
 ```bash
-docker pull ghcr.io/phalus-project/phalus:latest
+docker pull ghcr.io/phalus-sh/phalus:latest
 ```
 
 For convenience, add a shell alias:
@@ -51,7 +51,7 @@ alias phalus='docker run --rm \
   -e PHALUS_LLM__AGENT_A_API_KEY \
   -e PHALUS_LLM__AGENT_B_API_KEY \
   -v "$PWD":/work -w /work \
-  ghcr.io/phalus-project/phalus:latest'
+  ghcr.io/phalus-sh/phalus:latest'
 ```
 
 ---

@@ -7,7 +7,7 @@ PHALUS provides an official Docker image for users who prefer not to install Rus
 ## Image
 
 ```
-ghcr.io/phalus-project/phalus:latest
+ghcr.io/phalus-sh/phalus:latest
 ```
 
 Tags:
@@ -25,7 +25,7 @@ Tags:
 To build from source:
 
 ```bash
-git clone https://github.com/phalus-project/phalus.git
+git clone https://github.com/phalus-sh/phalus.git
 cd phalus
 docker build -t phalus:local .
 ```
@@ -44,7 +44,7 @@ docker run --rm \
   -e PHALUS_LLM__AGENT_B_API_KEY="sk-ant-..." \
   -v "$PWD":/work \
   -w /work \
-  ghcr.io/phalus-project/phalus:latest \
+  ghcr.io/phalus-sh/phalus:latest \
   run package.json --license mit
 ```
 
@@ -59,7 +59,7 @@ alias phalus='docker run --rm \
   -v "$PWD":/work \
   -v "$HOME/.phalus":/home/phalus/.phalus \
   -w /work \
-  ghcr.io/phalus-project/phalus:latest'
+  ghcr.io/phalus-sh/phalus:latest'
 ```
 
 This mounts the current directory as `/work` and the host `~/.phalus/` for persistent configuration and CSP cache. The `PHALUS_LLM__*` environment variables are forwarded from the host shell.
@@ -94,7 +94,7 @@ docker run --rm \
   -p 127.0.0.1:3000:3000 \
   -v "$PWD":/work \
   -w /work \
-  ghcr.io/phalus-project/phalus:latest \
+  ghcr.io/phalus-sh/phalus:latest \
   serve --host 0.0.0.0 --port 3000
 ```
 
@@ -115,7 +115,7 @@ docker run --rm \
   -v "$PWD":/work \
   -v "$PWD/phalus-output":/output \
   -w /work \
-  ghcr.io/phalus-project/phalus:latest \
+  ghcr.io/phalus-sh/phalus:latest \
   run package.json --output /output
 ```
 
@@ -130,7 +130,7 @@ docker run --rm \
   -v "$HOME/.phalus":/home/phalus/.phalus \
   -v "$PWD":/work \
   -w /work \
-  ghcr.io/phalus-project/phalus:latest \
+  ghcr.io/phalus-sh/phalus:latest \
   run package.json
 ```
 
@@ -148,7 +148,7 @@ docker run --rm \
   -e PHALUS_LLM__AGENT_B_API_KEY="sk-ant-..." \
   -v "$PWD":/work \
   -w /work \
-  ghcr.io/phalus-project/phalus:latest-rust \
+  ghcr.io/phalus-sh/phalus:latest-rust \
   run-one crates/serde@1.0.193
 ```
 
@@ -167,7 +167,7 @@ docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$PWD":/work \
   -w /work \
-  ghcr.io/phalus-project/phalus:latest \
+  ghcr.io/phalus-sh/phalus:latest \
   run package.json --isolation container
 ```
 
@@ -188,7 +188,7 @@ docker run --rm \
   -e PHALUS_LLM__AGENT_A_API_KEY="sk-ant-..." \
   -v "$PWD":/work \
   -w /work \
-  ghcr.io/phalus-project/phalus:latest \
+  ghcr.io/phalus-sh/phalus:latest \
   run package.json
 
 # Option 2: make the output directory world-writable before running
@@ -204,7 +204,7 @@ Example `docker-compose.yml` for running the web UI as a persistent service:
 ```yaml
 services:
   phalus:
-    image: ghcr.io/phalus-project/phalus:latest
+    image: ghcr.io/phalus-sh/phalus:latest
     command: serve --host 0.0.0.0 --port 3000
     environment:
       PHALUS_LLM__AGENT_A_API_KEY: "${PHALUS_LLM__AGENT_A_API_KEY}"
