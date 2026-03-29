@@ -74,13 +74,13 @@ flowchart TD
 cargo install phalus
 ```
 
-**Pre-built binary** — download from the [releases page](https://github.com/phalus-project/phalus/releases) and place on your `PATH`.
+**Pre-built binary** — download from the [releases page](https://github.com/phalus-sh/phalus/releases) and place on your `PATH`.
 
 **Docker:**
 
 ```bash
-docker pull ghcr.io/phalus-project/phalus:latest
-docker run --rm -v "$PWD":/work -w /work ghcr.io/phalus-project/phalus run package.json
+docker pull ghcr.io/phalus-sh/phalus:latest
+docker run --rm -v "$PWD":/work -w /work ghcr.io/phalus-sh/phalus run package.json
 ```
 
 ---
