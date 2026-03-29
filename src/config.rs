@@ -10,6 +10,27 @@ pub enum ConfigError {
     Parse(#[from] toml::de::Error),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RetryConfig {
+    /// Maximum number of retry attempts (not counting the initial attempt).
+    pub max_retries: u32,
+    /// Initial backoff in milliseconds; doubles on each retry.
+    pub initial_backoff_ms: u64,
+    /// Per-request timeout in seconds.
+    pub timeout_secs: u64,
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        Self {
+            max_retries: 3,
+            initial_backoff_ms: 500,
+            timeout_secs: 120,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LlmConfig {
@@ -21,6 +42,7 @@ pub struct LlmConfig {
     pub agent_b_model: String,
     pub agent_b_api_key: String,
     pub agent_b_base_url: String,
+    pub retry: RetryConfig,
 }
 
 impl Default for LlmConfig {
@@ -34,6 +56,7 @@ impl Default for LlmConfig {
             agent_b_model: "claude-sonnet-4-6".to_string(),
             agent_b_api_key: String::new(),
             agent_b_base_url: String::new(),
+            retry: RetryConfig::default(),
         }
     }
 }
@@ -63,6 +86,7 @@ impl std::fmt::Debug for LlmConfig {
                 },
             )
             .field("agent_b_base_url", &self.agent_b_base_url)
+            .field("retry", &self.retry)
             .finish()
     }
 }
@@ -275,6 +299,21 @@ fn apply_llm_override(cfg: &mut LlmConfig, field: &str, value: &str) {
         "agent_b_model" => cfg.agent_b_model = value.to_string(),
         "agent_b_api_key" => cfg.agent_b_api_key = value.to_string(),
         "agent_b_base_url" => cfg.agent_b_base_url = value.to_string(),
+        "retry_max_retries" => {
+            if let Ok(v) = value.parse() {
+                cfg.retry.max_retries = v;
+            }
+        }
+        "retry_initial_backoff_ms" => {
+            if let Ok(v) = value.parse() {
+                cfg.retry.initial_backoff_ms = v;
+            }
+        }
+        "retry_timeout_secs" => {
+            if let Ok(v) = value.parse() {
+                cfg.retry.timeout_secs = v;
+            }
+        }
         _ => {}
     }
 }
