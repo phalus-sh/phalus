@@ -374,7 +374,8 @@ async fn cmd_build(csp_path: PathBuf, config: PipelineConfig) -> Result<()> {
         network_mode: app_config.isolation.network_mode.clone(),
         pids_limit: app_config.isolation.pids_limit,
     };
-    let (csp, fw_event) = phalus::firewall::cross_firewall(csp, &config.isolation_mode, &container_cfg).await;
+    let (csp, fw_event) =
+        phalus::firewall::cross_firewall(csp, &config.isolation_mode, &container_cfg).await;
     if let Err(e) = audit.lock().await.log(fw_event) {
         tracing::error!("audit log failure: {}", e);
     }

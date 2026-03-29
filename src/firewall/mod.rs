@@ -244,11 +244,8 @@ async fn cross_firewall_container(csp: CspSpec, cfg: &ContainerConfig) -> (CspSp
         .stderr(std::process::Stdio::piped())
         .output();
 
-    let run_result = tokio::time::timeout(
-        std::time::Duration::from_secs(cfg.timeout_secs),
-        run_future,
-    )
-    .await;
+    let run_result =
+        tokio::time::timeout(std::time::Duration::from_secs(cfg.timeout_secs), run_future).await;
 
     match run_result {
         Err(_elapsed) => {

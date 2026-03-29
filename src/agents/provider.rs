@@ -17,10 +17,7 @@ pub enum ProviderError {
     #[error("request timed out after {timeout_secs}s")]
     Timeout { timeout_secs: u64 },
     #[error("retries exhausted after {attempts} attempts: {last_error}")]
-    RetriesExhausted {
-        attempts: u32,
-        last_error: String,
-    },
+    RetriesExhausted { attempts: u32, last_error: String },
 }
 
 #[derive(Debug, Serialize)]
@@ -119,10 +116,7 @@ impl LlmProvider {
         })
     }
 
-    async fn attempt_once(
-        &self,
-        request: &AnthropicRequest,
-    ) -> Result<String, ProviderError> {
+    async fn attempt_once(&self, request: &AnthropicRequest) -> Result<String, ProviderError> {
         let timeout = Duration::from_secs(self.retry.timeout_secs);
 
         let fut = self
@@ -144,7 +138,10 @@ impl LlmProvider {
         if !resp.status().is_success() {
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
-            return Err(ProviderError::Api { status, message: body });
+            return Err(ProviderError::Api {
+                status,
+                message: body,
+            });
         }
 
         let body: AnthropicResponse = resp.json().await.map_err(ProviderError::Http)?;
@@ -184,7 +181,12 @@ mod tests {
     }
 
     fn make_provider(base_url: &str) -> LlmProvider {
-        LlmProvider::new("test-key", "claude-sonnet-4-6", Some(base_url), default_retry())
+        LlmProvider::new(
+            "test-key",
+            "claude-sonnet-4-6",
+            Some(base_url),
+            default_retry(),
+        )
     }
 
     fn success_body() -> serde_json::Value {
@@ -207,8 +209,12 @@ mod tests {
 
     #[test]
     fn test_provider_custom_base_url() {
-        let provider =
-            LlmProvider::new("key", "model", Some("http://localhost:8080"), RetryConfig::default());
+        let provider = LlmProvider::new(
+            "key",
+            "model",
+            Some("http://localhost:8080"),
+            RetryConfig::default(),
+        );
         assert_eq!(provider.base_url, "http://localhost:8080");
     }
 
