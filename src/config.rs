@@ -10,6 +10,27 @@ pub enum ConfigError {
     Parse(#[from] toml::de::Error),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RetryConfig {
+    /// Maximum number of retry attempts (not counting the initial attempt).
+    pub max_retries: u32,
+    /// Initial backoff in milliseconds; doubles on each retry.
+    pub initial_backoff_ms: u64,
+    /// Per-request timeout in seconds.
+    pub timeout_secs: u64,
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        Self {
+            max_retries: 3,
+            initial_backoff_ms: 500,
+            timeout_secs: 120,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LlmConfig {
@@ -21,6 +42,7 @@ pub struct LlmConfig {
     pub agent_b_model: String,
     pub agent_b_api_key: String,
     pub agent_b_base_url: String,
+    pub retry: RetryConfig,
 }
 
 impl Default for LlmConfig {
@@ -34,6 +56,7 @@ impl Default for LlmConfig {
             agent_b_model: "claude-sonnet-4-6".to_string(),
             agent_b_api_key: String::new(),
             agent_b_base_url: String::new(),
+            retry: RetryConfig::default(),
         }
     }
 }
@@ -63,6 +86,7 @@ impl std::fmt::Debug for LlmConfig {
                 },
             )
             .field("agent_b_base_url", &self.agent_b_base_url)
+            .field("retry", &self.retry)
             .finish()
     }
 }
@@ -71,12 +95,30 @@ impl std::fmt::Debug for LlmConfig {
 #[serde(default)]
 pub struct IsolationConfig {
     pub mode: String,
+    /// Docker image used when isolation mode is "container"
+    pub docker_image: String,
+    /// Memory limit for the isolation container (e.g. "256m")
+    pub memory_limit: String,
+    /// CPU limit for the isolation container (e.g. "1.0")
+    pub cpu_limit: String,
+    /// Seconds before the container run is considered timed out
+    pub timeout_secs: u64,
+    /// Docker network mode for the isolation container ("none", "host", etc.)
+    pub network_mode: String,
+    /// Maximum number of PIDs in the isolation container
+    pub pids_limit: u32,
 }
 
 impl Default for IsolationConfig {
     fn default() -> Self {
         Self {
             mode: "context".to_string(),
+            docker_image: "alpine:3".to_string(),
+            memory_limit: "256m".to_string(),
+            cpu_limit: "1.0".to_string(),
+            timeout_secs: 60,
+            network_mode: "none".to_string(),
+            pids_limit: 64,
         }
     }
 }
@@ -275,13 +317,43 @@ fn apply_llm_override(cfg: &mut LlmConfig, field: &str, value: &str) {
         "agent_b_model" => cfg.agent_b_model = value.to_string(),
         "agent_b_api_key" => cfg.agent_b_api_key = value.to_string(),
         "agent_b_base_url" => cfg.agent_b_base_url = value.to_string(),
+        "retry_max_retries" => {
+            if let Ok(v) = value.parse() {
+                cfg.retry.max_retries = v;
+            }
+        }
+        "retry_initial_backoff_ms" => {
+            if let Ok(v) = value.parse() {
+                cfg.retry.initial_backoff_ms = v;
+            }
+        }
+        "retry_timeout_secs" => {
+            if let Ok(v) = value.parse() {
+                cfg.retry.timeout_secs = v;
+            }
+        }
         _ => {}
     }
 }
 
 fn apply_isolation_override(cfg: &mut IsolationConfig, field: &str, value: &str) {
-    if field == "mode" {
-        cfg.mode = value.to_string();
+    match field {
+        "mode" => cfg.mode = value.to_string(),
+        "docker_image" => cfg.docker_image = value.to_string(),
+        "memory_limit" => cfg.memory_limit = value.to_string(),
+        "cpu_limit" => cfg.cpu_limit = value.to_string(),
+        "timeout_secs" => {
+            if let Ok(v) = value.parse() {
+                cfg.timeout_secs = v;
+            }
+        }
+        "network_mode" => cfg.network_mode = value.to_string(),
+        "pids_limit" => {
+            if let Ok(v) = value.parse() {
+                cfg.pids_limit = v;
+            }
+        }
+        _ => {}
     }
 }
 

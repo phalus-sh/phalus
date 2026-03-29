@@ -42,6 +42,9 @@ enum Commands {
         manifest: PathBuf,
         #[arg(long, default_value = "mit")]
         license: String,
+        /// Path to a file containing the full license text (overrides --license)
+        #[arg(long)]
+        license_file: Option<PathBuf>,
         #[arg(long, default_value = "./phalus-output")]
         output: PathBuf,
         #[arg(long, value_delimiter = ',')]
@@ -66,6 +69,9 @@ enum Commands {
         package: String,
         #[arg(long, default_value = "mit")]
         license: String,
+        /// Path to a file containing the full license text (overrides --license)
+        #[arg(long)]
+        license_file: Option<PathBuf>,
         #[arg(long, default_value = "./phalus-output")]
         output: PathBuf,
         #[arg(long)]
@@ -93,6 +99,9 @@ enum Commands {
         csp: PathBuf,
         #[arg(long, default_value = "mit")]
         license: String,
+        /// Path to a file containing the full license text (overrides --license)
+        #[arg(long)]
+        license_file: Option<PathBuf>,
         #[arg(long, default_value = "./phalus-output")]
         output: PathBuf,
         #[arg(long)]
@@ -119,6 +128,19 @@ enum Commands {
         #[arg(long, default_value_t = 3000)]
         port: u16,
     },
+}
+
+// ---------------------------------------------------------------------------
+// Resolve license string from --license or --license-file
+// ---------------------------------------------------------------------------
+
+fn resolve_license(license: String, license_file: Option<PathBuf>) -> Result<String> {
+    if let Some(path) = license_file {
+        std::fs::read_to_string(&path)
+            .with_context(|| format!("failed to read license file: {}", path.display()))
+    } else {
+        Ok(license)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -344,7 +366,16 @@ async fn cmd_build(csp_path: PathBuf, config: PipelineConfig) -> Result<()> {
     let audit = Arc::new(Mutex::new(audit_logger));
 
     // Firewall crossing (the CSP is already on disk, but we still log the event)
-    let (csp, fw_event) = phalus::firewall::cross_firewall(csp, &config.isolation_mode).await;
+    let container_cfg = phalus::firewall::ContainerConfig {
+        image: app_config.isolation.docker_image.clone(),
+        memory_limit: app_config.isolation.memory_limit.clone(),
+        cpu_limit: app_config.isolation.cpu_limit.clone(),
+        timeout_secs: app_config.isolation.timeout_secs,
+        network_mode: app_config.isolation.network_mode.clone(),
+        pids_limit: app_config.isolation.pids_limit,
+    };
+    let (csp, fw_event) =
+        phalus::firewall::cross_firewall(csp, &config.isolation_mode, &container_cfg).await;
     if let Err(e) = audit.lock().await.log(fw_event) {
         tracing::error!("audit log failure: {}", e);
     }
@@ -593,6 +624,7 @@ async fn main() -> Result<()> {
         Commands::Run {
             manifest,
             license,
+            license_file,
             output,
             only,
             exclude,
@@ -606,6 +638,7 @@ async fn main() -> Result<()> {
             if verbose {
                 tracing::info!("verbose mode enabled");
             }
+            let license = resolve_license(license, license_file)?;
             let config = PipelineConfig {
                 license,
                 output_dir: output,
@@ -621,6 +654,7 @@ async fn main() -> Result<()> {
         Commands::RunOne {
             package,
             license,
+            license_file,
             output,
             target_lang,
             isolation,
@@ -630,6 +664,7 @@ async fn main() -> Result<()> {
             if verbose {
                 tracing::info!("verbose mode enabled");
             }
+            let license = resolve_license(license, license_file)?;
             let config = PipelineConfig {
                 license,
                 output_dir: output,
@@ -645,6 +680,7 @@ async fn main() -> Result<()> {
         Commands::Build {
             csp,
             license,
+            license_file,
             output,
             target_lang,
             isolation,
@@ -654,6 +690,7 @@ async fn main() -> Result<()> {
             if verbose {
                 tracing::info!("verbose mode enabled");
             }
+            let license = resolve_license(license, license_file)?;
             let config = PipelineConfig {
                 license,
                 output_dir: output,
