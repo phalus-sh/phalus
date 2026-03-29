@@ -42,6 +42,9 @@ enum Commands {
         manifest: PathBuf,
         #[arg(long, default_value = "mit")]
         license: String,
+        /// Path to a file containing the full license text (overrides --license)
+        #[arg(long)]
+        license_file: Option<PathBuf>,
         #[arg(long, default_value = "./phalus-output")]
         output: PathBuf,
         #[arg(long, value_delimiter = ',')]
@@ -66,6 +69,9 @@ enum Commands {
         package: String,
         #[arg(long, default_value = "mit")]
         license: String,
+        /// Path to a file containing the full license text (overrides --license)
+        #[arg(long)]
+        license_file: Option<PathBuf>,
         #[arg(long, default_value = "./phalus-output")]
         output: PathBuf,
         #[arg(long)]
@@ -93,6 +99,9 @@ enum Commands {
         csp: PathBuf,
         #[arg(long, default_value = "mit")]
         license: String,
+        /// Path to a file containing the full license text (overrides --license)
+        #[arg(long)]
+        license_file: Option<PathBuf>,
         #[arg(long, default_value = "./phalus-output")]
         output: PathBuf,
         #[arg(long)]
@@ -119,6 +128,19 @@ enum Commands {
         #[arg(long, default_value_t = 3000)]
         port: u16,
     },
+}
+
+// ---------------------------------------------------------------------------
+// Resolve license string from --license or --license-file
+// ---------------------------------------------------------------------------
+
+fn resolve_license(license: String, license_file: Option<PathBuf>) -> Result<String> {
+    if let Some(path) = license_file {
+        std::fs::read_to_string(&path)
+            .with_context(|| format!("failed to read license file: {}", path.display()))
+    } else {
+        Ok(license)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -593,6 +615,7 @@ async fn main() -> Result<()> {
         Commands::Run {
             manifest,
             license,
+            license_file,
             output,
             only,
             exclude,
@@ -606,6 +629,7 @@ async fn main() -> Result<()> {
             if verbose {
                 tracing::info!("verbose mode enabled");
             }
+            let license = resolve_license(license, license_file)?;
             let config = PipelineConfig {
                 license,
                 output_dir: output,
@@ -621,6 +645,7 @@ async fn main() -> Result<()> {
         Commands::RunOne {
             package,
             license,
+            license_file,
             output,
             target_lang,
             isolation,
@@ -630,6 +655,7 @@ async fn main() -> Result<()> {
             if verbose {
                 tracing::info!("verbose mode enabled");
             }
+            let license = resolve_license(license, license_file)?;
             let config = PipelineConfig {
                 license,
                 output_dir: output,
@@ -645,6 +671,7 @@ async fn main() -> Result<()> {
         Commands::Build {
             csp,
             license,
+            license_file,
             output,
             target_lang,
             isolation,
@@ -654,6 +681,7 @@ async fn main() -> Result<()> {
             if verbose {
                 tracing::info!("verbose mode enabled");
             }
+            let license = resolve_license(license, license_file)?;
             let config = PipelineConfig {
                 license,
                 output_dir: output,
