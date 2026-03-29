@@ -95,12 +95,30 @@ impl std::fmt::Debug for LlmConfig {
 #[serde(default)]
 pub struct IsolationConfig {
     pub mode: String,
+    /// Docker image used when isolation mode is "container"
+    pub docker_image: String,
+    /// Memory limit for the isolation container (e.g. "256m")
+    pub memory_limit: String,
+    /// CPU limit for the isolation container (e.g. "1.0")
+    pub cpu_limit: String,
+    /// Seconds before the container run is considered timed out
+    pub timeout_secs: u64,
+    /// Docker network mode for the isolation container ("none", "host", etc.)
+    pub network_mode: String,
+    /// Maximum number of PIDs in the isolation container
+    pub pids_limit: u32,
 }
 
 impl Default for IsolationConfig {
     fn default() -> Self {
         Self {
             mode: "context".to_string(),
+            docker_image: "alpine:3".to_string(),
+            memory_limit: "256m".to_string(),
+            cpu_limit: "1.0".to_string(),
+            timeout_secs: 60,
+            network_mode: "none".to_string(),
+            pids_limit: 64,
         }
     }
 }
@@ -319,8 +337,23 @@ fn apply_llm_override(cfg: &mut LlmConfig, field: &str, value: &str) {
 }
 
 fn apply_isolation_override(cfg: &mut IsolationConfig, field: &str, value: &str) {
-    if field == "mode" {
-        cfg.mode = value.to_string();
+    match field {
+        "mode" => cfg.mode = value.to_string(),
+        "docker_image" => cfg.docker_image = value.to_string(),
+        "memory_limit" => cfg.memory_limit = value.to_string(),
+        "cpu_limit" => cfg.cpu_limit = value.to_string(),
+        "timeout_secs" => {
+            if let Ok(v) = value.parse() {
+                cfg.timeout_secs = v;
+            }
+        }
+        "network_mode" => cfg.network_mode = value.to_string(),
+        "pids_limit" => {
+            if let Ok(v) = value.parse() {
+                cfg.pids_limit = v;
+            }
+        }
+        _ => {}
     }
 }
 

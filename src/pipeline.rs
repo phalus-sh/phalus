@@ -354,7 +354,15 @@ pub async fn run_package(
     );
 
     // 4. Firewall crossing
-    let (csp, fw_event) = firewall::cross_firewall(csp, &config.isolation_mode).await;
+    let container_cfg = firewall::ContainerConfig {
+        image: app_config.isolation.docker_image.clone(),
+        memory_limit: app_config.isolation.memory_limit.clone(),
+        cpu_limit: app_config.isolation.cpu_limit.clone(),
+        timeout_secs: app_config.isolation.timeout_secs,
+        network_mode: app_config.isolation.network_mode.clone(),
+        pids_limit: app_config.isolation.pids_limit,
+    };
+    let (csp, fw_event) = firewall::cross_firewall(csp, &config.isolation_mode, &container_cfg).await;
     if let Err(e) = audit.lock().await.log(fw_event) {
         tracing::error!("audit log failure: {}", e);
     }
