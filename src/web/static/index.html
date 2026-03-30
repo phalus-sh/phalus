@@ -4,116 +4,171 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PHALUS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0d1117;
-      --surface:   #161b22;
-      --border:    #30363d;
-      --accent:    #58a6ff;
-      --accent2:   #3fb950;
-      --warn:      #d29922;
-      --danger:    #f85149;
-      --text:      #e6edf3;
-      --muted:     #8b949e;
-      --radius:    6px;
+      --bg:      #0a0a0a;
+      --surface: #111;
+      --border:  #222;
+      --dim:     #333;
+      --accent:  #ff3e3e;
+      --accent2: #ff6b35;
+      --green:   #00ff41;
+      --yellow:  #ffd700;
+      --cyan:    #00e5ff;
+      --text:    #e8e8e8;
+      --muted:   #555;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      font-size: 14px;
+      font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 13px;
       line-height: 1.6;
       min-height: 100vh;
+      padding-bottom: 40px;
     }
 
     /* -- Header ------------------------------------------------ */
     header {
-      background: var(--surface);
+      background: var(--bg);
       border-bottom: 1px solid var(--border);
       padding: 0 24px;
-      height: 56px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: var(--accent);
+      margin-right: 24px;
+      flex-shrink: 0;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      height: 100%;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 0 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+
+    .header-right {
+      margin-left: auto;
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
-    header .logo {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: var(--accent);
+    .version-label {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1px;
     }
 
-    header .tagline {
-      color: var(--muted);
-      font-size: 12px;
+    .health-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
     }
 
-    header .badge {
-      margin-left: auto;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2px 10px;
-      font-size: 11px;
-      color: var(--muted);
-    }
+    .health-dot.ok    { background: var(--green); }
+    .health-dot.error { background: var(--accent); }
 
     /* -- Layout ------------------------------------------------- */
     main {
-      max-width: 960px;
-      margin: 32px auto;
+      max-width: 980px;
+      margin: 24px auto;
       padding: 0 24px;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .grid-2x2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 24px;
+      gap: 16px;
+    }
+
+    .grid-scan {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 16px;
     }
 
     @media (max-width: 700px) {
-      main { grid-template-columns: 1fr; }
+      .grid-2x2, .grid-scan { grid-template-columns: 1fr; }
     }
 
     /* -- Cards -------------------------------------------------- */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
+      padding: 16px;
     }
 
-    .card h2 {
-      font-size: 13px;
-      font-weight: 600;
+    .card-label {
+      font-size: 9px;
+      letter-spacing: 3px;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      margin-bottom: 14px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 8px;
+      color: var(--accent);
+      margin-bottom: 12px;
     }
+
+    .span-2 { grid-column: 1 / -1; }
 
     /* -- Form elements ------------------------------------------ */
     label {
       display: block;
-      font-size: 12px;
+      font-size: 10px;
       color: var(--muted);
       margin-bottom: 4px;
     }
 
-    textarea, input, select {
+    textarea, input[type="text"], input[type="number"], select {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
       color: var(--text);
-      font-size: 13px;
-      padding: 8px 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      padding: 7px 10px;
       outline: none;
       transition: border-color 0.15s;
-      font-family: inherit;
     }
 
     textarea:focus, input:focus, select:focus {
@@ -122,93 +177,157 @@
 
     textarea {
       resize: vertical;
-      min-height: 140px;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      font-size: 12px;
+      min-height: 120px;
+      font-size: 11px;
     }
 
+    select { cursor: pointer; }
     select option { background: var(--surface); }
 
-    .field { margin-bottom: 14px; }
+    .field { margin-bottom: 12px; }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .checkbox-row label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 0;
+      cursor: pointer;
+    }
+
+    input[type="checkbox"] {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+      position: relative;
+    }
+
+    input[type="checkbox"]:checked {
+      border-color: var(--accent);
+    }
+
+    input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px; right: 2px; bottom: 2px;
+      background: var(--accent);
+    }
 
     /* -- Drop zone ---------------------------------------------- */
     .dropzone {
-      border: 2px dashed var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
+      border: 1px dashed var(--dim);
+      padding: 14px;
       text-align: center;
       cursor: pointer;
       color: var(--muted);
-      font-size: 12px;
-      transition: border-color 0.15s, background 0.15s;
+      font-size: 11px;
+      transition: border-color 0.15s;
       margin-bottom: 8px;
     }
 
+    .dropzone:hover { border-color: var(--muted); }
+
     .dropzone.drag-over {
       border-color: var(--accent);
-      background: rgba(88, 166, 255, 0.05);
+      background: rgba(255, 62, 62, 0.03);
     }
 
-    .dropzone span { display: block; margin-top: 4px; font-size: 11px; }
+    .dropzone .hint {
+      display: block;
+      margin-top: 4px;
+      font-size: 9px;
+      color: var(--dim);
+    }
 
     /* -- Buttons ------------------------------------------------ */
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 18px;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 13px;
+      padding: 7px 16px;
+      border: 1px solid var(--border);
+      background: none;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
       font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
       cursor: pointer;
-      transition: opacity 0.15s;
+      transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+      color: var(--muted);
     }
 
-    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
     .btn:not(:disabled):hover { opacity: 0.85; }
 
-    .btn-primary  { background: var(--accent);  color: #fff; }
-    .btn-success  { background: var(--accent2); color: #000; }
-    .btn-danger   { background: var(--danger);  color: #fff; }
-    .btn-ghost    { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-accent {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-accent:not(:disabled):hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-success {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .btn-danger {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
 
     .btn-row {
       display: flex;
       gap: 8px;
-      margin-top: 16px;
+      margin-top: 14px;
       flex-wrap: wrap;
     }
+
+    .btn-full { width: 100%; justify-content: center; }
 
     /* -- Progress ----------------------------------------------- */
     .progress-list {
       list-style: none;
-      max-height: 220px;
+      max-height: 200px;
       overflow-y: auto;
-      font-size: 12px;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 11px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) var(--bg);
     }
 
     .progress-list li {
-      padding: 3px 0;
-      border-bottom: 1px solid var(--border);
+      padding: 2px 0;
+      border-bottom: 1px solid var(--bg);
       color: var(--muted);
     }
 
-    .progress-list li.ok   { color: var(--accent2); }
-    .progress-list li.fail { color: var(--danger);  }
-    .progress-list li.info { color: var(--accent);  }
+    .progress-list li.ok   { color: var(--green); }
+    .progress-list li.fail { color: var(--accent); }
+    .progress-list li.info { color: var(--cyan); }
 
     .progress-empty {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       font-style: italic;
     }
 
-    /* -- Progress counter --------------------------------------- */
     .progress-counter {
-      font-size: 12px;
-      color: var(--accent);
+      font-size: 11px;
+      color: var(--cyan);
       margin-bottom: 8px;
       font-weight: 600;
     }
@@ -216,72 +335,63 @@
     /* -- Results ------------------------------------------------ */
     .results-placeholder {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       font-style: italic;
-      padding: 12px 0;
     }
 
     .result-card {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px 16px;
-      margin-bottom: 8px;
+      padding: 10px 14px;
+      margin-bottom: 6px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    .result-card .pkg-info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
+    .result-card .pkg-info { display: flex; flex-direction: column; gap: 1px; }
 
     .result-card .pkg-name {
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
     }
 
+    .result-card .pkg-name .ver { color: var(--muted); font-weight: 400; }
+
     .result-card .pkg-meta {
-      font-size: 11px;
+      font-size: 9px;
       color: var(--muted);
     }
 
-    .result-card .pkg-badge {
+    .pkg-badge {
       font-weight: 700;
-      font-size: 11px;
-      padding: 2px 10px;
-      border-radius: 12px;
+      font-size: 9px;
+      padding: 2px 8px;
+      letter-spacing: 1px;
       text-transform: uppercase;
     }
 
-    .result-card .pkg-badge.pass {
-      background: rgba(63, 185, 80, 0.15);
-      color: var(--accent2);
+    .pkg-badge.pass {
+      background: rgba(0, 255, 65, 0.12);
+      color: var(--green);
     }
 
-    .result-card .pkg-badge.fail {
-      background: rgba(248, 81, 73, 0.15);
-      color: var(--danger);
+    .pkg-badge.fail {
+      background: rgba(255, 62, 62, 0.12);
+      color: var(--accent);
     }
-
-    .badge-pass { color: var(--accent2); font-weight: 700; font-size: 11px; }
-    .badge-fail { color: var(--danger);  font-weight: 700; font-size: 11px; }
 
     /* -- Download banner ---------------------------------------- */
     .download-banner {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
       text-align: center;
     }
 
     .download-banner .summary-text {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       margin-bottom: 10px;
     }
@@ -291,7 +401,7 @@
       display: inline-flex;
     }
 
-    /* -- Parsed packages list ----------------------------------- */
+    /* -- Parsed packages ---------------------------------------- */
     .parsed-packages {
       list-style: none;
       margin-top: 8px;
@@ -301,517 +411,898 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 4px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 12px;
+      padding: 3px 0;
+      border-bottom: 1px solid var(--bg);
+      font-size: 11px;
     }
 
     .parsed-packages li:last-child { border-bottom: none; }
 
-    .parsed-packages .eco-badge {
-      background: rgba(88, 166, 255, 0.1);
-      color: var(--accent);
-      font-size: 10px;
+    .eco-badge {
+      background: rgba(255, 62, 62, 0.1);
+      color: var(--accent2);
+      font-size: 9px;
       font-weight: 600;
-      padding: 1px 6px;
-      border-radius: 3px;
+      padding: 1px 5px;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
-    .parsed-packages .pkg-name {
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      font-weight: 600;
+    /* -- Scan view ---------------------------------------------- */
+    .scan-summary-number {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
     }
 
-    .parsed-packages .pkg-ver {
+    .scan-summary-label {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .scan-stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      padding: 4px 0;
+    }
+
+    .license-bar {
+      height: 6px;
+      display: flex;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .license-bar div { transition: width 0.3s; }
+
+    /* -- Scan table --------------------------------------------- */
+    .scan-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .scan-table th {
+      text-align: left;
+      padding: 6px 0;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 400;
+    }
+
+    .scan-table td {
+      padding: 7px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .scan-table td:first-child { color: var(--text); font-weight: 600; }
+
+    .scan-table .license-cell { color: var(--text); }
+
+    .class-permissive     { color: var(--green); font-weight: 600; font-size: 10px; }
+    .class-copyleft-weak  { color: var(--yellow); font-weight: 600; font-size: 10px; }
+    .class-copyleft-strong { color: var(--accent); font-weight: 600; font-size: 10px; }
+    .class-proprietary    { color: var(--accent); font-weight: 600; font-size: 10px; }
+    .class-unknown        { color: var(--muted); font-weight: 600; font-size: 10px; }
+
+    .scan-more {
+      text-align: center;
+      color: var(--muted);
+      font-size: 10px;
+      padding: 8px 0;
+      cursor: pointer;
+    }
+
+    .scan-more:hover { color: var(--text); }
+
+    /* -- Scan history ------------------------------------------- */
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .history-table th {
+      text-align: left;
+      padding: 6px 0;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 400;
+    }
+
+    .history-table td {
+      padding: 7px 0;
+      border-bottom: 1px solid #1a1a1a;
       color: var(--muted);
     }
 
-    /* -- Span full width ---------------------------------------- */
-    .span-2 { grid-column: 1 / -1; }
+    .history-table td:first-child { color: var(--text); }
+
+    .view-link {
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 10px;
+    }
+
+    .view-link:hover { color: var(--accent2); }
 
     /* -- Status bar --------------------------------------------- */
     #status-bar {
-      background: var(--surface);
+      background: var(--bg);
       border-top: 1px solid var(--border);
       padding: 6px 24px;
-      font-size: 11px;
+      font-size: 10px;
       color: var(--muted);
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
+      display: flex;
+      justify-content: space-between;
     }
 
-    #status-bar .dot {
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
       display: inline-block;
       width: 7px;
       height: 7px;
       border-radius: 50%;
-      background: var(--accent2);
-      margin-right: 6px;
-      vertical-align: middle;
+      background: var(--muted);
     }
 
-    #status-bar .dot.idle   { background: var(--muted); }
-    #status-bar .dot.busy   { background: var(--warn); animation: pulse 1s infinite; }
-    #status-bar .dot.error  { background: var(--danger); }
+    .status-dot.idle  { background: var(--muted); }
+    .status-dot.ok    { background: var(--green); }
+    .status-dot.busy  { background: var(--yellow); animation: pulse 1s infinite; }
+    .status-dot.error { background: var(--accent); }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50%       { opacity: 0.35; }
+      50%      { opacity: 0.35; }
     }
 
-    /* bottom spacing so content not hidden by status bar */
-    body { padding-bottom: 40px; }
+    .status-right {
+      color: var(--dim);
+    }
+
+    /* -- Responsive --------------------------------------------- */
+    @media (max-width: 700px) {
+      header { padding: 0 12px; }
+      main { padding: 0 12px; margin: 16px auto; }
+      .logo { font-size: 12px; letter-spacing: 2px; margin-right: 12px; }
+      .tab-btn { padding: 0 10px; font-size: 10px; }
+    }
   </style>
 </head>
 <body>
 
-<!-- -- Header ---------------------------------------------------- -->
+<!-- Header -->
 <header>
   <span class="logo">PHALUS</span>
-  <span class="tagline">Private Headless Automated License Uncoupling System</span>
-  <span class="badge" id="health-badge">checking…</span>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="pipeline">Pipeline</button>
+    <button class="tab-btn" data-tab="scan">Scan</button>
+  </div>
+  <div class="header-right">
+    <span class="version-label">v0.5.0</span>
+    <span class="health-dot" id="health-dot" title="Checking..."></span>
+  </div>
 </header>
 
-<!-- -- Main grid ------------------------------------------------- -->
 <main>
 
-  <!-- Input card -->
-  <div class="card">
-    <h2>Manifest Input</h2>
+  <!-- ============================================================ -->
+  <!-- PIPELINE VIEW                                                 -->
+  <!-- ============================================================ -->
+  <div class="view active" id="view-pipeline">
+    <div class="grid-2x2">
 
-    <div id="dropzone" class="dropzone" role="button" tabindex="0"
-         aria-label="Drop manifest file here or click to browse">
-      Drop manifest file here
-      <span>package.json · requirements.txt · Cargo.toml · go.mod</span>
+      <!-- Input -->
+      <div class="card">
+        <div class="card-label">// Input</div>
+
+        <div id="dropzone" class="dropzone" role="button" tabindex="0"
+             aria-label="Drop manifest file here or click to browse">
+          Drop manifest file here
+          <span class="hint">package.json &middot; requirements.txt &middot; Cargo.toml &middot; go.mod</span>
+        </div>
+        <input type="file" id="file-input" style="display:none"
+               accept=".json,.txt,.toml,.mod,.lock" />
+
+        <div class="field">
+          <label for="manifest-text">or paste manifest content</label>
+          <textarea id="manifest-text" placeholder='{ "dependencies": { "lodash": "^4.17.21" } }'></textarea>
+        </div>
+
+        <button class="btn btn-full" id="parse-btn">Parse</button>
+        <div id="parse-result" style="margin-top:8px;font-size:11px;color:var(--muted);"></div>
+      </div>
+
+      <!-- Options -->
+      <div class="card">
+        <div class="card-label">// Options</div>
+
+        <div class="field">
+          <label for="run-one-input">Single package (ecosystem/name@version)</label>
+          <input id="run-one-input" type="text" placeholder="npm/lodash@4.17.21" />
+        </div>
+
+        <div class="field">
+          <label for="license-select">Output license</label>
+          <select id="license-select">
+            <option value="mit">MIT</option>
+            <option value="apache-2.0">Apache 2.0</option>
+            <option value="bsd-2">BSD 2-Clause</option>
+            <option value="bsd-3">BSD 3-Clause</option>
+            <option value="isc">ISC</option>
+            <option value="unlicense">Unlicense</option>
+            <option value="cc0">CC0</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="target-lang-select">Target language</label>
+          <select id="target-lang-select">
+            <option value="same">Same as source</option>
+            <option value="rust">Rust</option>
+            <option value="go">Go</option>
+            <option value="python">Python</option>
+            <option value="typescript">TypeScript</option>
+          </select>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-accent" id="start-btn">&#9654; Start</button>
+          <button class="btn btn-danger" id="stop-btn" disabled>&#9632; Stop</button>
+          <button class="btn" id="clear-btn">Clear</button>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="card">
+        <div class="card-label">// Progress</div>
+        <div class="progress-counter" id="progress-counter" style="display:none"></div>
+        <p class="progress-empty" id="progress-empty">No job running.</p>
+        <ul class="progress-list" id="progress-list" style="display:none"></ul>
+      </div>
+
+      <!-- Results -->
+      <div class="card" id="results-card">
+        <div class="card-label">// Results</div>
+        <p class="results-placeholder" id="results-empty">Results will appear here after a job completes.</p>
+        <div id="results-list"></div>
+      </div>
+
     </div>
-    <input type="file" id="file-input" style="display:none"
-           accept=".json,.txt,.toml,.mod,.lock" />
-
-    <div class="field">
-      <label for="manifest-text">… or paste manifest content</label>
-      <textarea id="manifest-text" placeholder='{ "dependencies": { "lodash": "^4.17.21" } }'></textarea>
-    </div>
-
-    <button class="btn btn-ghost" id="parse-btn" style="width:100%">Parse Manifest</button>
-
-    <div id="parse-result" style="margin-top:10px; font-size:12px; color:var(--muted);"></div>
   </div>
 
-  <!-- Options card -->
-  <div class="card">
-    <h2>Run Options</h2>
+  <!-- ============================================================ -->
+  <!-- SCAN VIEW                                                     -->
+  <!-- ============================================================ -->
+  <div class="view" id="view-scan">
+    <div class="grid-scan">
 
-    <div class="field">
-      <label for="run-one-input">Single package (ecosystem/name@version)</label>
-      <input id="run-one-input" type="text" placeholder="npm/lodash@4.17.21" />
+      <!-- Left column: input + summary -->
+      <div>
+        <!-- Scan input -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-label">// Scan</div>
+
+          <div class="field">
+            <label for="scan-path">Directory or manifest path</label>
+            <input id="scan-path" type="text" placeholder="./my-project" />
+          </div>
+
+          <div class="checkbox-row" style="margin-bottom:12px;">
+            <label><input type="checkbox" id="scan-offline" /> Offline</label>
+            <div>
+              <label for="scan-concurrency" style="display:inline;margin-bottom:0;">Concurrency</label>
+              <input id="scan-concurrency" type="number" value="8" min="1" max="32"
+                     style="width:50px;display:inline;padding:4px 6px;font-size:11px;margin-left:4px;" />
+            </div>
+          </div>
+
+          <button class="btn btn-accent btn-full" id="scan-btn">Scan</button>
+          <div id="scan-error" style="margin-top:8px;font-size:11px;color:var(--accent);display:none;"></div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card" id="scan-summary" style="display:none;">
+          <div class="card-label">// Summary</div>
+          <div class="scan-summary-number" id="scan-total">0</div>
+          <div class="scan-summary-label">packages scanned</div>
+
+          <div id="scan-stats"></div>
+
+          <div class="license-bar" id="license-bar"></div>
+        </div>
+      </div>
+
+      <!-- Right column: results table -->
+      <div class="card" id="scan-results-card">
+        <div class="card-label">// Packages</div>
+        <p class="results-placeholder" id="scan-results-empty">Run a scan or select one from history.</p>
+        <div id="scan-results-table"></div>
+      </div>
+
     </div>
 
-    <div class="field">
-      <label for="license-select">Output license</label>
-      <select id="license-select">
-        <option value="mit">MIT</option>
-        <option value="apache-2.0">Apache 2.0</option>
-        <option value="bsd-2">BSD 2-Clause</option>
-        <option value="bsd-3">BSD 3-Clause</option>
-        <option value="isc">ISC</option>
-        <option value="unlicense">Unlicense</option>
-        <option value="cc0">CC0</option>
-      </select>
+    <!-- Scan history -->
+    <div class="card" style="margin-top:16px;" id="scan-history-card">
+      <div class="card-label">// Scan History</div>
+      <p class="results-placeholder" id="scan-history-empty">No saved scans yet.</p>
+      <div id="scan-history-table"></div>
     </div>
-
-    <div class="field">
-      <label for="target-lang-select">Target language</label>
-      <select id="target-lang-select">
-        <option value="same">Same as source</option>
-        <option value="rust">Rust</option>
-        <option value="go">Go</option>
-        <option value="python">Python</option>
-        <option value="typescript">TypeScript</option>
-      </select>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-success" id="start-btn">&#9654; Start</button>
-      <button class="btn btn-danger"  id="stop-btn" disabled>&#9632; Stop</button>
-      <button class="btn btn-ghost"   id="clear-btn">Clear</button>
-    </div>
-  </div>
-
-  <!-- Progress card -->
-  <div class="card">
-    <h2>Progress</h2>
-    <div class="progress-counter" id="progress-counter" style="display:none"></div>
-    <p class="progress-empty" id="progress-empty">No job running. Start a job to see progress here.</p>
-    <ul class="progress-list" id="progress-list" style="display:none"></ul>
-  </div>
-
-  <!-- Results card (spans full width when active) -->
-  <div class="card" id="results-card">
-    <h2>Results</h2>
-    <p class="results-placeholder" id="results-empty">Results will appear here after a job completes.</p>
-    <div id="results-list"></div>
   </div>
 
 </main>
 
-<!-- -- Status bar ------------------------------------------------ -->
+<!-- Status bar -->
 <div id="status-bar">
-  <span class="dot idle" id="status-dot"></span>
-  <span id="status-text">Idle — connect PHALUS to an LLM provider to run jobs</span>
+  <div class="status-left">
+    <span class="status-dot idle" id="status-dot"></span>
+    <span id="status-text">Idle</span>
+  </div>
+  <div class="status-right">phalus v0.5.0</div>
 </div>
 
 <script>
-  "use strict";
+"use strict";
 
-  // -- State variables ------------------------------------------
-  let currentJobId = null;
-  let totalPackages = 0;
-  let processedPackages = 0;
-  let packageStartTimes = {};
+// =================================================================
+// TAB NAVIGATION
+// =================================================================
+var tabBtns = document.querySelectorAll('.tab-btn');
+tabBtns.forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var tab = btn.getAttribute('data-tab');
+    tabBtns.forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+    document.getElementById('view-' + tab).classList.add('active');
+    if (tab === 'scan') loadScanHistory();
+  });
+});
 
-  // -- Health check ---------------------------------------------
-  async function checkHealth() {
-    try {
-      const r = await fetch("/api/health");
-      if (r.ok) {
-        document.getElementById("health-badge").textContent = "API ok";
-        document.getElementById("health-badge").style.color = "var(--accent2)";
-      } else {
-        throw new Error("non-ok");
+// =================================================================
+// UTILITIES
+// =================================================================
+function escapeHtml(s) {
+  var div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function setStatus(msg, kind) {
+  document.getElementById('status-text').textContent = msg;
+  document.getElementById('status-dot').className = 'status-dot ' + (kind || 'idle');
+}
+
+function timeAgo(dateStr) {
+  var now = Date.now();
+  var then = new Date(dateStr).getTime();
+  var diff = Math.floor((now - then) / 1000);
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+// =================================================================
+// HEALTH CHECK
+// =================================================================
+(function checkHealth() {
+  fetch('/api/health').then(function(r) {
+    if (r.ok) {
+      document.getElementById('health-dot').className = 'health-dot ok';
+      document.getElementById('health-dot').title = 'API ok';
+    } else {
+      throw new Error('non-ok');
+    }
+  }).catch(function() {
+    document.getElementById('health-dot').className = 'health-dot error';
+    document.getElementById('health-dot').title = 'API unreachable';
+  });
+})();
+
+// =================================================================
+// PIPELINE VIEW
+// =================================================================
+var currentJobId = null;
+var totalPackages = 0;
+var processedPackages = 0;
+var packageStartTimes = {};
+var jobRunning = false;
+var eventSource = null;
+
+// -- Drop zone ---
+var dropzone  = document.getElementById('dropzone');
+var fileInput = document.getElementById('file-input');
+var textArea  = document.getElementById('manifest-text');
+
+dropzone.addEventListener('click', function() { fileInput.click(); });
+dropzone.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+dropzone.addEventListener('dragover', function(e) { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', function() { dropzone.classList.remove('drag-over'); });
+dropzone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', function() {
+  if (fileInput.files[0]) readFile(fileInput.files[0]);
+});
+
+function readFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(ev) { textArea.value = ev.target.result; };
+  reader.readAsText(file);
+  dropzone.textContent = file.name;
+}
+
+// -- Parse manifest ---
+document.getElementById('parse-btn').addEventListener('click', function() {
+  var body = textArea.value.trim();
+  if (!body) { setParseResult('Paste or drop a manifest first.', 'warn'); return; }
+  fetch('/api/manifest/parse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: body
+  }).then(function(r) { return r.json(); }).then(function(json) {
+    if (json.error) {
+      setParseResult('Error: ' + json.error, 'fail');
+    } else {
+      showParsedPackages(json);
+    }
+  }).catch(function(err) {
+    setParseResult('Error: ' + err.message, 'fail');
+  });
+});
+
+function setParseResult(msg, kind) {
+  var el = document.getElementById('parse-result');
+  el.textContent = msg;
+  el.style.color = kind === 'ok' ? 'var(--green)' : kind === 'fail' ? 'var(--accent)' : 'var(--yellow)';
+}
+
+function showParsedPackages(manifest) {
+  var el = document.getElementById('parse-result');
+  el.style.color = 'var(--green)';
+  var pkgs = manifest.packages || [];
+  totalPackages = pkgs.length;
+
+  var html = '<div style="margin-bottom:6px;color:var(--green);font-weight:600;">' +
+    escapeHtml(String(pkgs.length)) + ' package' + (pkgs.length !== 1 ? 's' : '') +
+    ' detected (' + escapeHtml(manifest.manifest_type || 'unknown') + ')</div>';
+
+  html += '<ul class="parsed-packages">';
+  for (var i = 0; i < pkgs.length; i++) {
+    var pkg = pkgs[i];
+    html += '<li>' +
+      '<span class="eco-badge">' + escapeHtml(pkg.ecosystem || 'unknown') + '</span>' +
+      '<span style="font-weight:600;">' + escapeHtml(pkg.name || '?') + '</span>' +
+      '<span style="color:var(--muted);">' + escapeHtml(pkg.version_constraint || '*') + '</span>' +
+      '</li>';
+  }
+  html += '</ul>';
+  el.innerHTML = html;
+}
+
+// -- Progress helpers ---
+function addProgress(msg, kind) {
+  var list = document.getElementById('progress-list');
+  var empty = document.getElementById('progress-empty');
+  empty.style.display = 'none';
+  list.style.display = '';
+  var li = document.createElement('li');
+  li.textContent = msg;
+  if (kind) li.className = kind;
+  list.appendChild(li);
+  list.scrollTop = list.scrollHeight;
+}
+
+function updateProgressCounter(current, total) {
+  var counter = document.getElementById('progress-counter');
+  counter.style.display = '';
+  counter.textContent = 'Processing ' + current + ' of ' + total + '...';
+}
+
+function clearProgress() {
+  var list = document.getElementById('progress-list');
+  list.innerHTML = '';
+  list.style.display = 'none';
+  document.getElementById('progress-empty').style.display = '';
+  var counter = document.getElementById('progress-counter');
+  counter.style.display = 'none';
+  counter.textContent = '';
+}
+
+function clearResults() {
+  document.getElementById('results-list').innerHTML = '';
+  document.getElementById('results-empty').style.display = '';
+  document.getElementById('results-card').className = 'card';
+}
+
+function addResultCard(pkg, version, pass, elapsed) {
+  document.getElementById('results-empty').style.display = 'none';
+  document.getElementById('results-card').className = 'card span-2';
+
+  var card = document.createElement('div');
+  card.className = 'result-card';
+  var badgeClass = pass ? 'pass' : 'fail';
+  var badgeText = pass ? 'PASS' : 'FAIL';
+  var elapsedText = elapsed ? ' — ' + elapsed + 's' : '';
+
+  card.innerHTML =
+    '<div class="pkg-info">' +
+      '<span class="pkg-name">' + escapeHtml(pkg) + '<span class="ver">@' + escapeHtml(version) + '</span></span>' +
+      '<span class="pkg-meta">Completed' + escapeHtml(elapsedText) + '</span>' +
+    '</div>' +
+    '<span class="pkg-badge ' + badgeClass + '">' + badgeText + '</span>';
+
+  document.getElementById('results-list').appendChild(card);
+}
+
+// -- Start / Stop ---
+document.getElementById('start-btn').addEventListener('click', startJob);
+document.getElementById('stop-btn').addEventListener('click', stopJob);
+
+function startJob() {
+  var runOne = document.getElementById('run-one-input').value.trim();
+  var manifestContent = textArea.value.trim();
+  if (!runOne && !manifestContent) {
+    setStatus('Provide a package spec or manifest.', 'error');
+    return;
+  }
+
+  clearProgress();
+  clearResults();
+  processedPackages = 0;
+  packageStartTimes = {};
+  jobRunning = true;
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('stop-btn').disabled = false;
+  setStatus('Job running...', 'busy');
+
+  var jobManifest = manifestContent;
+  if (runOne && !manifestContent) {
+    var parts = runOne.split('/');
+    if (parts.length === 2) {
+      var eco = parts[0];
+      var rest = parts[1] || '';
+      var atIdx = rest.indexOf('@');
+      var name = atIdx >= 0 ? rest.substring(0, atIdx) : rest;
+      var version = atIdx >= 0 ? rest.substring(atIdx + 1) : 'latest';
+      if (eco === 'npm' && name) {
+        var deps = {};
+        deps[name] = version;
+        jobManifest = JSON.stringify({ dependencies: deps });
       }
-    } catch {
-      document.getElementById("health-badge").textContent = "API unreachable";
-      document.getElementById("health-badge").style.color = "var(--danger)";
     }
-  }
-  checkHealth();
-
-  // -- Drop zone ------------------------------------------------
-  const dropzone  = document.getElementById("dropzone");
-  const fileInput = document.getElementById("file-input");
-  const textArea  = document.getElementById("manifest-text");
-
-  dropzone.addEventListener("click", () => fileInput.click());
-  dropzone.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") fileInput.click(); });
-
-  dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("drag-over"); });
-  dropzone.addEventListener("dragleave",  () => dropzone.classList.remove("drag-over"));
-  dropzone.addEventListener("drop", e => {
-    e.preventDefault();
-    dropzone.classList.remove("drag-over");
-    const file = e.dataTransfer.files[0];
-    if (file) readFile(file);
-  });
-
-  fileInput.addEventListener("change", () => {
-    if (fileInput.files[0]) readFile(fileInput.files[0]);
-  });
-
-  function readFile(file) {
-    const reader = new FileReader();
-    reader.onload = ev => { textArea.value = ev.target.result; };
-    reader.readAsText(file);
-    dropzone.textContent = file.name;
+    if (!jobManifest) jobManifest = runOne;
   }
 
-  // -- Parse manifest -------------------------------------------
-  document.getElementById("parse-btn").addEventListener("click", async () => {
-    const body = textArea.value.trim();
-    if (!body) { setParseResult("Paste or drop a manifest first.", "warn"); return; }
-    try {
-      const r = await fetch("/api/manifest/parse", {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body,
-      });
-      const json = await r.json();
-      if (json.error) {
-        setParseResult("Error: " + json.error, "fail");
-      } else {
-        showParsedPackages(json);
+  addProgress('Submitting job...', 'info');
+
+  var license = document.getElementById('license-select').value;
+  fetch('/api/jobs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ manifest_content: jobManifest, license: license, isolation: 'context' })
+  }).then(function(r) {
+    if (!r.ok) return r.json().catch(function() { return { error: 'unknown' }; }).then(function(err) { throw new Error(err.error || r.statusText); });
+    return r.json();
+  }).then(function(data) {
+    currentJobId = data.job_id;
+    addProgress('Job created: ' + data.job_id, 'info');
+
+    eventSource = new EventSource('/api/jobs/' + data.job_id + '/stream');
+    eventSource.onmessage = function(ev) {
+      try {
+        var d = JSON.parse(ev.data);
+        if (d.PackageStarted) {
+          processedPackages++;
+          packageStartTimes[d.PackageStarted.name] = Date.now();
+          if (totalPackages > 0) updateProgressCounter(processedPackages, totalPackages);
+          addProgress('Started: ' + d.PackageStarted.name, 'info');
+        } else if (d.PhaseDone) {
+          addProgress('  ' + d.PhaseDone.name + ' \u2192 ' + d.PhaseDone.phase, '');
+        } else if (d.PackageDone) {
+          var ok = d.PackageDone.success;
+          var pkgName = d.PackageDone.name;
+          var elapsed = null;
+          if (packageStartTimes[pkgName]) elapsed = ((Date.now() - packageStartTimes[pkgName]) / 1000).toFixed(1);
+          addProgress((ok ? 'OK' : 'FAIL') + ' ' + pkgName + (elapsed ? ' (' + elapsed + 's)' : ''), ok ? 'ok' : 'fail');
+          addResultCard(pkgName, 'latest', ok, elapsed);
+        } else if (d.JobDone != null) {
+          var total = d.JobDone.total;
+          var failed = d.JobDone.failed;
+          addProgress('Job done: ' + total + ' packages, ' + failed + ' failed', 'ok');
+          document.getElementById('progress-counter').textContent = 'Completed: ' + total + ' packages';
+
+          var resultsDiv = document.getElementById('results-list');
+          var summary = document.createElement('div');
+          summary.className = 'download-banner';
+          var failHtml = failed > 0
+            ? '<span style="color:var(--accent)">' + escapeHtml(String(failed)) + ' failed</span>'
+            : '<span style="color:var(--green)">0 failed</span>';
+          summary.innerHTML =
+            '<div class="summary-text">' + escapeHtml(String(total)) + ' packages processed, ' + failHtml + '</div>' +
+            '<a href="/api/jobs/' + escapeHtml(currentJobId) + '/download" class="btn btn-success" style="text-decoration:none;">Download Output (.zip)</a>';
+          resultsDiv.insertBefore(summary, resultsDiv.firstChild);
+
+          setStatus('Idle — job completed.', 'ok');
+          jobRunning = false;
+          document.getElementById('start-btn').disabled = false;
+          document.getElementById('stop-btn').disabled = true;
+          if (eventSource) { eventSource.close(); eventSource = null; }
+        }
+      } catch (e) {
+        addProgress('Event: ' + ev.data, '');
       }
-    } catch (err) {
-      setParseResult("Error: " + err.message, "fail");
-    }
+    };
+    eventSource.onerror = function() {
+      if (jobRunning) {
+        addProgress('SSE connection lost.', 'fail');
+        setStatus('Connection lost.', 'error');
+      }
+      if (eventSource) { eventSource.close(); eventSource = null; }
+      jobRunning = false;
+      document.getElementById('start-btn').disabled = false;
+      document.getElementById('stop-btn').disabled = true;
+    };
+  }).catch(function(err) {
+    addProgress('Error: ' + err.message, 'fail');
+    setStatus('Job failed.', 'error');
+    jobRunning = false;
+    document.getElementById('start-btn').disabled = false;
+    document.getElementById('stop-btn').disabled = true;
   });
+}
 
-  function setParseResult(msg, kind) {
-    const el = document.getElementById("parse-result");
-    el.textContent = msg;
-    el.style.color = kind === "ok" ? "var(--accent2)" : kind === "fail" ? "var(--danger)" : "var(--warn)";
+function stopJob() {
+  if (eventSource) { eventSource.close(); eventSource = null; }
+  jobRunning = false;
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('stop-btn').disabled = true;
+  addProgress('Job stopped by user.', 'fail');
+  setStatus('Idle — job stopped.', 'idle');
+}
+
+// -- Clear ---
+document.getElementById('clear-btn').addEventListener('click', function() {
+  textArea.value = '';
+  document.getElementById('run-one-input').value = '';
+  document.getElementById('parse-result').textContent = '';
+  dropzone.innerHTML = 'Drop manifest file here<span class="hint">package.json &middot; requirements.txt &middot; Cargo.toml &middot; go.mod</span>';
+  clearProgress();
+  clearResults();
+  currentJobId = null;
+  totalPackages = 0;
+  processedPackages = 0;
+  packageStartTimes = {};
+  setStatus('Idle', 'idle');
+});
+
+// =================================================================
+// SCAN VIEW
+// =================================================================
+var SCAN_PAGE_SIZE = 20;
+var currentScanPackages = [];
+var scanShowAll = false;
+
+document.getElementById('scan-btn').addEventListener('click', runScan);
+
+function runScan() {
+  var path = document.getElementById('scan-path').value.trim();
+  if (!path) {
+    showScanError('Enter a directory or manifest path.');
+    return;
   }
 
-  function showParsedPackages(manifest) {
-    const el = document.getElementById("parse-result");
-    el.style.color = "var(--accent2)";
+  hideScanError();
+  document.getElementById('scan-btn').disabled = true;
+  document.getElementById('scan-btn').textContent = 'SCANNING...';
+  setStatus('Scanning...', 'busy');
 
-    const type = manifest.manifest_type || "unknown";
-    const pkgs = manifest.packages || [];
-    totalPackages = pkgs.length;
+  var offline = document.getElementById('scan-offline').checked;
+  var concurrency = parseInt(document.getElementById('scan-concurrency').value, 10) || 8;
 
-    let html = '<div style="margin-bottom:6px;color:var(--accent2);font-weight:600;">' +
-      escapeHtml(String(pkgs.length)) + ' package' + (pkgs.length !== 1 ? 's' : '') +
-      ' detected (' + escapeHtml(type) + ')</div>';
+  fetch('/api/scans', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: path, offline: offline, concurrency: concurrency })
+  }).then(function(r) {
+    if (!r.ok) return r.json().catch(function() { return { error: 'scan failed' }; }).then(function(err) { throw new Error(err.error || 'scan failed'); });
+    return r.json();
+  }).then(function(result) {
+    displayScanResult(result);
+    setStatus('Scan complete — ' + result.packages.length + ' packages.', 'ok');
+    loadScanHistory();
+  }).catch(function(err) {
+    showScanError(err.message);
+    setStatus('Scan failed.', 'error');
+  }).finally(function() {
+    document.getElementById('scan-btn').disabled = false;
+    document.getElementById('scan-btn').textContent = 'SCAN';
+  });
+}
 
-    html += '<ul class="parsed-packages">';
-    for (const pkg of pkgs) {
-      const eco = pkg.ecosystem || "unknown";
-      const name = pkg.name || "?";
-      const ver = pkg.version_constraint || "*";
-      html += '<li>' +
-        '<span class="eco-badge">' + escapeHtml(eco) + '</span>' +
-        '<span class="pkg-name">' + escapeHtml(name) + '</span>' +
-        '<span class="pkg-ver">' + escapeHtml(ver) + '</span>' +
-        '</li>';
+function showScanError(msg) {
+  var el = document.getElementById('scan-error');
+  el.textContent = msg;
+  el.style.display = '';
+}
+
+function hideScanError() {
+  document.getElementById('scan-error').style.display = 'none';
+}
+
+function displayScanResult(result) {
+  var pkgs = result.packages || [];
+  currentScanPackages = pkgs;
+  scanShowAll = false;
+
+  // Summary
+  var summary = document.getElementById('scan-summary');
+  summary.style.display = '';
+  document.getElementById('scan-total').textContent = pkgs.length;
+
+  var counts = { permissive: 0, 'copyleft-weak': 0, 'copyleft-strong': 0, proprietary: 0, unknown: 0 };
+  for (var i = 0; i < pkgs.length; i++) {
+    var cls = (pkgs[i].classification || 'unknown').toLowerCase().replace(/_/g, '-');
+    if (cls === 'copyleftweak') cls = 'copyleft-weak';
+    if (cls === 'copyleftstrong') cls = 'copyleft-strong';
+    if (counts[cls] !== undefined) counts[cls]++;
+    else counts.unknown++;
+  }
+
+  var statsHtml = '';
+  var classLabels = [
+    ['permissive', 'Permissive', 'var(--green)'],
+    ['copyleft-weak', 'Copyleft (weak)', 'var(--yellow)'],
+    ['copyleft-strong', 'Copyleft (strong)', 'var(--accent)'],
+    ['proprietary', 'Proprietary', 'var(--accent)'],
+    ['unknown', 'Unknown', 'var(--muted)']
+  ];
+  for (var j = 0; j < classLabels.length; j++) {
+    var key = classLabels[j][0], label = classLabels[j][1], color = classLabels[j][2];
+    statsHtml += '<div class="scan-stat-row">' +
+      '<span style="color:var(--muted);">' + label + '</span>' +
+      '<span style="color:' + color + ';font-weight:700;">' + counts[key] + '</span>' +
+      '</div>';
+  }
+  document.getElementById('scan-stats').innerHTML = statsHtml;
+
+  // License bar
+  var total = pkgs.length || 1;
+  var barHtml = '';
+  var barColors = { permissive: 'var(--green)', 'copyleft-weak': 'var(--yellow)', 'copyleft-strong': 'var(--accent)', proprietary: 'var(--accent)', unknown: 'var(--muted)' };
+  for (var k = 0; k < classLabels.length; k++) {
+    var bk = classLabels[k][0];
+    if (counts[bk] > 0) {
+      barHtml += '<div style="width:' + (counts[bk] / total * 100) + '%;background:' + barColors[bk] + ';"></div>';
     }
-    html += '</ul>';
+  }
+  document.getElementById('license-bar').innerHTML = barHtml;
 
-    el.innerHTML = html;
+  // Table
+  renderScanTable();
+}
+
+function renderScanTable() {
+  var pkgs = currentScanPackages;
+  var limit = scanShowAll ? pkgs.length : Math.min(pkgs.length, SCAN_PAGE_SIZE);
+
+  document.getElementById('scan-results-empty').style.display = 'none';
+
+  var html = '<table class="scan-table"><thead><tr>' +
+    '<th>Package</th><th>Version</th><th>Ecosystem</th><th>License</th><th>Class</th>' +
+    '</tr></thead><tbody>';
+
+  for (var i = 0; i < limit; i++) {
+    var p = pkgs[i];
+    var cls = (p.classification || 'unknown').toLowerCase().replace(/_/g, '-');
+    if (cls === 'copyleftweak') cls = 'copyleft-weak';
+    if (cls === 'copyleftstrong') cls = 'copyleft-strong';
+    html += '<tr>' +
+      '<td>' + escapeHtml(p.name || '') + '</td>' +
+      '<td style="color:var(--muted);">' + escapeHtml(p.version || '') + '</td>' +
+      '<td><span class="eco-badge">' + escapeHtml(p.ecosystem || '') + '</span></td>' +
+      '<td class="license-cell">' + escapeHtml(p.spdx_license || p.raw_license || '—') + '</td>' +
+      '<td><span class="class-' + cls + '">' + escapeHtml(cls) + '</span></td>' +
+      '</tr>';
   }
 
-  // -- Progress helpers -----------------------------------------
-  let jobRunning = false;
-  let eventSource = null;
+  html += '</tbody></table>';
 
-  function addProgress(msg, kind) {
-    const list = document.getElementById("progress-list");
-    const empty = document.getElementById("progress-empty");
-    empty.style.display = "none";
-    list.style.display  = "";
-    const li = document.createElement("li");
-    li.textContent = msg;
-    if (kind) li.className = kind;
-    list.appendChild(li);
-    list.scrollTop = list.scrollHeight;
+  if (!scanShowAll && pkgs.length > SCAN_PAGE_SIZE) {
+    html += '<div class="scan-more" id="scan-show-more">... ' + (pkgs.length - SCAN_PAGE_SIZE) + ' more packages (click to expand)</div>';
   }
 
-  function updateProgressCounter(current, total) {
-    const counter = document.getElementById("progress-counter");
-    counter.style.display = "";
-    counter.textContent = "Processing " + current + " of " + total + "...";
+  document.getElementById('scan-results-table').innerHTML = html;
+
+  if (!scanShowAll && pkgs.length > SCAN_PAGE_SIZE) {
+    document.getElementById('scan-show-more').addEventListener('click', function() {
+      scanShowAll = true;
+      renderScanTable();
+    });
   }
+}
 
-  function clearProgress() {
-    const list  = document.getElementById("progress-list");
-    const empty = document.getElementById("progress-empty");
-    const counter = document.getElementById("progress-counter");
-    list.innerHTML   = "";
-    list.style.display  = "none";
-    empty.style.display = "";
-    counter.style.display = "none";
-    counter.textContent = "";
-  }
+// -- Scan history ---
+function loadScanHistory() {
+  fetch('/api/scans').then(function(r) { return r.json(); }).then(function(data) {
+    var scans = data.scans || data || [];
+    if (!Array.isArray(scans)) scans = [];
 
-  function clearResults() {
-    document.getElementById("results-list").innerHTML = "";
-    document.getElementById("results-empty").style.display = "";
-    // Remove span-2 from results card
-    document.getElementById("results-card").className = "card";
-  }
-
-  function escapeHtml(s) {
-    const div = document.createElement("div");
-    div.textContent = s;
-    return div.innerHTML;
-  }
-
-  function addResultCard(pkg, version, pass, elapsed) {
-    document.getElementById("results-empty").style.display = "none";
-    // Make results span full width
-    document.getElementById("results-card").className = "card span-2";
-
-    const card = document.createElement("div");
-    card.className = "result-card";
-
-    const badgeClass = pass ? "pass" : "fail";
-    const badgeText = pass ? "PASS" : "FAIL";
-    const elapsedText = elapsed ? " — " + elapsed + "s" : "";
-
-    card.innerHTML =
-      '<div class="pkg-info">' +
-        '<span class="pkg-name">' + escapeHtml(pkg) + '@' + escapeHtml(version) + '</span>' +
-        '<span class="pkg-meta">Completed' + escapeHtml(elapsedText) + '</span>' +
-      '</div>' +
-      '<span class="pkg-badge ' + badgeClass + '">' + badgeText + '</span>';
-
-    document.getElementById("results-list").appendChild(card);
-  }
-
-  // -- Status helpers -------------------------------------------
-  function setStatus(msg, kind) {
-    document.getElementById("status-text").textContent = msg;
-    const dot = document.getElementById("status-dot");
-    dot.className = "dot " + (kind || "idle");
-  }
-
-  // -- Start / Stop ---------------------------------------------
-  document.getElementById("start-btn").addEventListener("click", startJob);
-  document.getElementById("stop-btn").addEventListener("click",  stopJob);
-
-  async function startJob() {
-    const runOne = document.getElementById("run-one-input").value.trim();
-    const manifestContent = textArea.value.trim();
-    if (!runOne && !manifestContent) {
-      setStatus("Provide a package spec or manifest before starting.", "error");
+    if (scans.length === 0) {
+      document.getElementById('scan-history-empty').style.display = '';
+      document.getElementById('scan-history-table').innerHTML = '';
       return;
     }
 
-    clearProgress();
-    clearResults();
-    processedPackages = 0;
-    packageStartTimes = {};
-    jobRunning = true;
-    document.getElementById("start-btn").disabled = true;
-    document.getElementById("stop-btn").disabled  = false;
-    setStatus("Job running…", "busy");
+    document.getElementById('scan-history-empty').style.display = 'none';
 
-    // Build manifest content for the API
-    let jobManifest = manifestContent;
-    if (runOne && !manifestContent) {
-      // Create a simple package.json for single-package mode
-      const parts = runOne.split("/");
-      if (parts.length === 2) {
-        const [eco, rest] = parts;
-        const [name, version] = (rest || "").split("@");
-        if (eco === "npm" && name && version) {
-          jobManifest = JSON.stringify({ dependencies: { [name]: version } });
-        }
-      }
-      if (!jobManifest) jobManifest = runOne;
+    var html = '<table class="history-table"><thead><tr>' +
+      '<th>Path</th><th>Packages</th><th>Scanned</th><th></th>' +
+      '</tr></thead><tbody>';
+
+    for (var i = 0; i < scans.length; i++) {
+      var s = scans[i];
+      var count = s.package_count !== undefined ? s.package_count : (s.packages ? s.packages.length : '?');
+      var scannedAt = s.scanned_at ? timeAgo(s.scanned_at) : '—';
+      html += '<tr>' +
+        '<td>' + escapeHtml(s.path || '') + '</td>' +
+        '<td style="color:var(--muted);">' + escapeHtml(String(count)) + '</td>' +
+        '<td style="color:var(--muted);">' + escapeHtml(scannedAt) + '</td>' +
+        '<td><span class="view-link" data-scan-id="' + escapeHtml(s.id || '') + '">view \u2192</span></td>' +
+        '</tr>';
     }
 
-    addProgress("Submitting job to backend…", "info");
+    html += '</tbody></table>';
+    document.getElementById('scan-history-table').innerHTML = html;
 
-    try {
-      const license = document.getElementById("license-select").value;
-      const r = await fetch("/api/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          manifest_content: jobManifest,
-          license: license,
-          isolation: "context",
-        }),
+    // Attach click handlers
+    document.querySelectorAll('.view-link[data-scan-id]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var id = el.getAttribute('data-scan-id');
+        loadScanById(id);
       });
-
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({ error: "unknown" }));
-        addProgress("Job creation failed: " + (err.error || r.statusText), "fail");
-        setStatus("Job failed.", "error");
-        jobRunning = false;
-        document.getElementById("start-btn").disabled = false;
-        document.getElementById("stop-btn").disabled  = true;
-        return;
-      }
-
-      const { job_id } = await r.json();
-      currentJobId = job_id;
-      addProgress("Job created: " + job_id, "info");
-
-      // Connect SSE stream
-      eventSource = new EventSource("/api/jobs/" + job_id + "/stream");
-      eventSource.onmessage = function(ev) {
-        try {
-          const data = JSON.parse(ev.data);
-          if (data.PackageStarted) {
-            processedPackages++;
-            packageStartTimes[data.PackageStarted.name] = Date.now();
-            if (totalPackages > 0) {
-              updateProgressCounter(processedPackages, totalPackages);
-            }
-            addProgress("Started: " + data.PackageStarted.name, "info");
-          } else if (data.PhaseDone) {
-            addProgress("  " + data.PhaseDone.name + " → " + data.PhaseDone.phase, "");
-          } else if (data.PackageDone) {
-            const ok = data.PackageDone.success;
-            const pkgName = data.PackageDone.name;
-            let elapsed = null;
-            if (packageStartTimes[pkgName]) {
-              elapsed = ((Date.now() - packageStartTimes[pkgName]) / 1000).toFixed(1);
-            }
-            addProgress((ok ? "OK" : "FAIL") + " " + pkgName + (elapsed ? " (" + elapsed + "s)" : ""), ok ? "ok" : "fail");
-            addResultCard(pkgName, "latest", ok, elapsed);
-          } else if (data.JobDone != null) {
-            const total = data.JobDone.total;
-            const failed = data.JobDone.failed;
-            addProgress("Job done: " + total + " packages, " + failed + " failed", "ok");
-
-            // Update progress counter to done
-            const counter = document.getElementById("progress-counter");
-            counter.textContent = "Completed: " + total + " packages processed";
-
-            // Insert summary banner with download button
-            const resultsDiv = document.getElementById("results-list");
-            const summary = document.createElement("div");
-            summary.className = "download-banner";
-            const failText = failed > 0
-              ? '<span style="color:var(--danger)">' + escapeHtml(String(failed)) + ' failed</span>'
-              : '<span style="color:var(--accent2)">0 failed</span>';
-            summary.innerHTML =
-              '<div class="summary-text">' +
-                escapeHtml(String(total)) + ' packages processed, ' + failText +
-              '</div>' +
-              '<a href="/api/jobs/' + escapeHtml(currentJobId) + '/download" ' +
-                 'class="btn btn-success" style="text-decoration:none;display:inline-flex;">' +
-                 'Download Output (.zip)' +
-              '</a>';
-            resultsDiv.insertBefore(summary, resultsDiv.firstChild);
-
-            setStatus("Idle — last job completed.", "idle");
-            jobRunning = false;
-            document.getElementById("start-btn").disabled = false;
-            document.getElementById("stop-btn").disabled  = true;
-            if (eventSource) { eventSource.close(); eventSource = null; }
-          }
-        } catch (e) {
-          addProgress("Event: " + ev.data, "");
-        }
-      };
-      eventSource.onerror = function() {
-        if (jobRunning) {
-          addProgress("SSE connection lost.", "fail");
-          setStatus("Connection lost.", "error");
-        }
-        if (eventSource) { eventSource.close(); eventSource = null; }
-        jobRunning = false;
-        document.getElementById("start-btn").disabled = false;
-        document.getElementById("stop-btn").disabled  = true;
-      };
-    } catch (err) {
-      addProgress("Error: " + err.message, "fail");
-      setStatus("Job failed.", "error");
-      jobRunning = false;
-      document.getElementById("start-btn").disabled = false;
-      document.getElementById("stop-btn").disabled  = true;
-    }
-  }
-
-  function stopJob() {
-    if (eventSource) { eventSource.close(); eventSource = null; }
-    jobRunning = false;
-    document.getElementById("start-btn").disabled = false;
-    document.getElementById("stop-btn").disabled  = true;
-    addProgress("Job stopped by user.", "fail");
-    setStatus("Idle — job stopped.", "idle");
-  }
-
-  // -- Clear ----------------------------------------------------
-  document.getElementById("clear-btn").addEventListener("click", () => {
-    textArea.value = "";
-    document.getElementById("run-one-input").value = "";
-    document.getElementById("parse-result").textContent = "";
-    dropzone.innerHTML = 'Drop manifest file here<span>package.json · requirements.txt · Cargo.toml · go.mod</span>';
-    clearProgress();
-    clearResults();
-    currentJobId = null;
-    totalPackages = 0;
-    processedPackages = 0;
-    packageStartTimes = {};
-    setStatus("Idle", "idle");
+    });
+  }).catch(function() {
+    // Silently fail — scan history is optional
   });
+}
+
+function loadScanById(id) {
+  setStatus('Loading scan...', 'busy');
+  fetch('/api/scans/' + encodeURIComponent(id)).then(function(r) {
+    if (!r.ok) throw new Error('not found');
+    return r.json();
+  }).then(function(result) {
+    displayScanResult(result);
+    setStatus('Scan loaded.', 'ok');
+  }).catch(function(err) {
+    showScanError('Failed to load scan: ' + err.message);
+    setStatus('Failed to load scan.', 'error');
+  });
+}
 </script>
 </body>
 </html>
