@@ -31,8 +31,15 @@ impl CspCache {
     }
 
     fn cache_path(&self, name: &str, version: &str, content_hash: &str) -> PathBuf {
-        self.dir
-            .join(format!("{name}@{version}-{content_hash}.json"))
+        // Sanitize components to prevent path traversal. Replace any character
+        // that could escape the cache directory (path separators, `..`) with `_`.
+        let safe = |s: &str| s.replace(['/', '\\'], "_").replace("..", "_");
+        self.dir.join(format!(
+            "{}-{}-{}.json",
+            safe(name),
+            safe(version),
+            safe(content_hash)
+        ))
     }
 
     pub fn get(&self, name: &str, version: &str, content_hash: &str) -> Option<CspSpec> {
@@ -51,7 +58,11 @@ impl CspCache {
         std::fs::create_dir_all(&self.dir)?;
         let path = self.cache_path(name, version, content_hash);
         let json = serde_json::to_string_pretty(csp)?;
-        std::fs::write(path, json)?;
+        // Write atomically: write to a temp file then rename into place so
+        // concurrent readers never see a partial write.
+        let tmp_path = path.with_extension("tmp");
+        std::fs::write(&tmp_path, json)?;
+        std::fs::rename(&tmp_path, &path)?;
         Ok(())
     }
 }

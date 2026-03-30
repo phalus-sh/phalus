@@ -65,25 +65,43 @@ fn cross_firewall_context(csp: CspSpec) -> (CspSpec, AuditEvent) {
 async fn cross_firewall_process(csp: CspSpec) -> (CspSpec, AuditEvent) {
     let temp_dir = std::env::temp_dir().join("phalus-firewall");
     let _ = tokio::fs::create_dir_all(&temp_dir).await;
-    let safe_name = csp
-        .package_name
-        .replace(['/', '\\'], "_")
-        .replace("..", "_");
-    let safe_version = csp
-        .package_version
-        .replace(['/', '\\'], "_")
-        .replace("..", "_");
-    let temp_path = temp_dir.join(format!("csp-{}-{}.json", safe_name, safe_version));
+    let run_id = uuid::Uuid::new_v4();
+    let temp_path = temp_dir.join(format!("csp-{}.json", run_id));
 
     // Serialize to disk
-    let serialized = serde_json::to_string_pretty(&csp).unwrap_or_default();
-    let _ = tokio::fs::write(&temp_path, &serialized).await;
+    let serialized = match serde_json::to_string_pretty(&csp) {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!("process firewall: failed to serialize CSP: {}", e);
+            let _ = tokio::fs::remove_file(&temp_path).await;
+            return cross_firewall_context(csp);
+        }
+    };
+    if let Err(e) = tokio::fs::write(&temp_path, &serialized).await {
+        tracing::error!("process firewall: failed to write temp file: {}", e);
+        return cross_firewall_context(csp);
+    }
 
     // Read back from disk (proving serialization boundary)
-    let read_back = tokio::fs::read_to_string(&temp_path)
-        .await
-        .unwrap_or(serialized);
-    let deserialized: CspSpec = serde_json::from_str(&read_back).unwrap_or(csp);
+    let read_back = match tokio::fs::read_to_string(&temp_path).await {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!("process firewall: failed to read temp file: {}", e);
+            let _ = tokio::fs::remove_file(&temp_path).await;
+            return cross_firewall_context(csp);
+        }
+    };
+    let deserialized: CspSpec = match serde_json::from_str(&read_back) {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!(
+                "process firewall: failed to deserialize CSP from disk: {}",
+                e
+            );
+            let _ = tokio::fs::remove_file(&temp_path).await;
+            return cross_firewall_context(csp);
+        }
+    };
 
     // Clean up temp file
     let _ = tokio::fs::remove_file(&temp_path).await;
@@ -202,10 +220,10 @@ async fn cross_firewall_container(csp: CspSpec, cfg: &ContainerConfig) -> (CspSp
     let input_mount = format!("{}:/input:ro", input_abs.display());
     let output_mount = format!("{}:/output:rw", output_abs.display());
     // Copy exactly the CSP file across the Docker boundary.
-    let container_cmd = format!(
-        "cp /input/{csp_filename} /output/{csp_filename}",
-        csp_filename = csp_filename
-    );
+    // Pass cp arguments directly (no shell) to prevent shell injection via
+    // package name or version containing metacharacters like $(), backticks, etc.
+    let input_file = format!("/input/{}", csp_filename);
+    let output_file = format!("/output/{}", csp_filename);
 
     tracing::info!(
         "container firewall: starting container for {}@{} (image={}, network={}, memory={}, cpus={})",
@@ -236,9 +254,9 @@ async fn cross_firewall_container(csp: CspSpec, cfg: &ContainerConfig) -> (CspSp
             "--stop-timeout",
             &cfg.timeout_secs.to_string(),
             &cfg.image,
-            "sh",
-            "-c",
-            &container_cmd,
+            "cp",
+            &input_file,
+            &output_file,
         ])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::piped())

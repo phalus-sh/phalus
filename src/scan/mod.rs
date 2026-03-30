@@ -137,16 +137,13 @@ fn collect_files(
         }
 
         if path.is_dir() {
-            // Recurse, but only one level for common vendor/dependency dirs
-            if !DEEP_SKIP_DIRS.contains(&file_name) {
-                collect_files(
-                    &path,
-                    manifest_files,
-                    sbom_files,
-                    package_refs,
-                    sbom_packages,
-                )?;
-            }
+            collect_files(
+                &path,
+                manifest_files,
+                sbom_files,
+                package_refs,
+                sbom_packages,
+            )?;
             continue;
         }
 
@@ -218,10 +215,6 @@ const SKIP_DIRS: &[&str] = &[
     ".venv",
     "env",
 ];
-
-/// Directories we recurse into but don't look for manifests at deeper levels
-/// (prevents picking up nested test-fixture package.json etc.).
-const DEEP_SKIP_DIRS: &[&str] = &[];
 
 // ---------------------------------------------------------------------------
 // Registry license resolution
