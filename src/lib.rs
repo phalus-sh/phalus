@@ -181,7 +181,7 @@ pub fn resolve_license_text(license_id: &str, year: &str, holder: &str) -> Optio
 // ---------------------------------------------------------------------------
 
 /// SPDX-canonical license classification bucket.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum LicenseClass {
     Permissive,
