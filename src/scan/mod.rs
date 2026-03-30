@@ -10,9 +10,11 @@ use uuid::Uuid;
 
 use crate::license;
 use crate::manifest;
-use crate::registry::{crates::CratesResolver, golang::GoResolver, npm::NpmResolver, pypi::PypiResolver};
+use crate::registry::{
+    crates::CratesResolver, golang::GoResolver, npm::NpmResolver, pypi::PypiResolver,
+};
 use crate::sbom;
-use crate::{Ecosystem, LicenseClass, ScannedPackage, ScanResult};
+use crate::{Ecosystem, LicenseClass, ScanResult, ScannedPackage};
 
 /// Options for a scan run.
 #[derive(Debug, Clone)]
@@ -55,10 +57,7 @@ pub async fn run_scan(path: &Path, opts: ScanOptions) -> Result<ScanResult> {
         )?;
     } else {
         // Single file — determine kind
-        let file_name = abs_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let file_name = abs_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if sbom::is_sbom_filename(file_name) {
             let content = std::fs::read_to_string(&abs_path)?;
             match sbom::parse_sbom(&content) {
@@ -132,10 +131,7 @@ fn collect_files(
         let path = entry.path();
 
         // Skip hidden directories and common non-source dirs
-        let file_name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if file_name.starts_with('.') || SKIP_DIRS.contains(&file_name) {
             continue;
         }
@@ -215,7 +211,7 @@ const SKIP_DIRS: &[&str] = &[
     ".pytest_cache",
     "dist",
     "build",
-    "target",      // Rust build artifacts
+    "target", // Rust build artifacts
     ".cargo",
     "vendor",
     "venv",

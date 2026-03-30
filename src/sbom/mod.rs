@@ -1,6 +1,6 @@
+use crate::license;
 /// SBOM ingestion: parse CycloneDX BOM JSON and SPDX JSON into `ScannedPackage` lists.
 use crate::{Ecosystem, ScannedPackage};
-use crate::license;
 use serde::Deserialize;
 use thiserror::Error;
 

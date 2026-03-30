@@ -43,8 +43,7 @@ pub fn save(result: &ScanResult) -> Result<PathBuf> {
 /// Load a `ScanResult` by its ID.
 pub fn load(id: &str) -> Result<ScanResult> {
     let path = scan_path(id)?;
-    let json = std::fs::read_to_string(&path)
-        .with_context(|| format!("scan {} not found", id))?;
+    let json = std::fs::read_to_string(&path).with_context(|| format!("scan {} not found", id))?;
     serde_json::from_str(&json).with_context(|| format!("invalid scan data for {}", id))
 }
 
@@ -82,8 +81,7 @@ pub fn list_all() -> Result<Vec<ScanResult>> {
 pub fn delete(id: &str) -> Result<bool> {
     let path = scan_path(id)?;
     if path.exists() {
-        std::fs::remove_file(&path)
-            .with_context(|| format!("failed to delete scan {}", id))?;
+        std::fs::remove_file(&path).with_context(|| format!("failed to delete scan {}", id))?;
         Ok(true)
     } else {
         Ok(false)
@@ -93,7 +91,7 @@ pub fn delete(id: &str) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Ecosystem, LicenseClass, ScannedPackage, ScanResult};
+    use crate::{Ecosystem, LicenseClass, ScanResult, ScannedPackage};
     use chrono::Utc;
 
     fn make_result(id: &str) -> ScanResult {
@@ -122,10 +120,7 @@ mod tests {
         let loaded = load("store-test-round-trip").unwrap();
         assert_eq!(loaded.id, result.id);
         assert_eq!(loaded.packages.len(), 1);
-        assert_eq!(
-            loaded.packages[0].spdx_license.as_deref(),
-            Some("MIT")
-        );
+        assert_eq!(loaded.packages[0].spdx_license.as_deref(), Some("MIT"));
         // Cleanup
         delete("store-test-round-trip").unwrap();
     }

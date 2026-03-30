@@ -36,18 +36,12 @@ pub fn normalize(raw: &str) -> String {
 
         // BSD variants
         "bsd" | "bsd license" => "BSD-2-Clause",
-        "bsd-2-clause"
-        | "bsd 2-clause"
-        | "bsd-2"
-        | "simplified bsd"
-        | "freebsd"
-        | "bsd 2" => "BSD-2-Clause",
-        "bsd-3-clause"
-        | "bsd 3-clause"
-        | "bsd-3"
-        | "new bsd"
-        | "modified bsd"
-        | "bsd 3" => "BSD-3-Clause",
+        "bsd-2-clause" | "bsd 2-clause" | "bsd-2" | "simplified bsd" | "freebsd" | "bsd 2" => {
+            "BSD-2-Clause"
+        }
+        "bsd-3-clause" | "bsd 3-clause" | "bsd-3" | "new bsd" | "modified bsd" | "bsd 3" => {
+            "BSD-3-Clause"
+        }
         "bsd-4-clause" | "bsd 4-clause" | "original bsd" => "BSD-4-Clause",
         "0bsd" | "zero-clause bsd" => "0BSD",
 
@@ -62,15 +56,13 @@ pub fn normalize(raw: &str) -> String {
         // LGPL variants
         "lgpl-2.0" | "lgpl 2.0" | "gnu lesser general public license v2" => "LGPL-2.0-only",
         "lgpl-2.0+" | "lgpl-2.0-or-later" | "lgpl v2+" => "LGPL-2.0-or-later",
-        "lgpl-2.1"
-        | "lgpl 2.1"
-        | "gnu lesser general public license v2.1"
-        | "lgpl2.1" => "LGPL-2.1-only",
+        "lgpl-2.1" | "lgpl 2.1" | "gnu lesser general public license v2.1" | "lgpl2.1" => {
+            "LGPL-2.1-only"
+        }
         "lgpl-2.1+" | "lgpl-2.1-or-later" | "lgpl v2.1+" | "lgpl2.1+" => "LGPL-2.1-or-later",
-        "lgpl-3.0"
-        | "lgpl 3.0"
-        | "gnu lesser general public license v3"
-        | "lgpl3" => "LGPL-3.0-only",
+        "lgpl-3.0" | "lgpl 3.0" | "gnu lesser general public license v3" | "lgpl3" => {
+            "LGPL-3.0-only"
+        }
         "lgpl-3.0+" | "lgpl-3.0-or-later" | "lgpl v3+" | "lgpl3+" => "LGPL-3.0-or-later",
 
         // GPL variants
@@ -90,10 +82,9 @@ pub fn normalize(raw: &str) -> String {
         "gpl-3.0+" | "gpl-3.0-or-later" | "gplv3+" | "gpl v3+" => "GPL-3.0-or-later",
 
         // AGPL
-        "agpl-3.0"
-        | "agpl 3.0"
-        | "agplv3"
-        | "gnu affero general public license v3" => "AGPL-3.0-only",
+        "agpl-3.0" | "agpl 3.0" | "agplv3" | "gnu affero general public license v3" => {
+            "AGPL-3.0-only"
+        }
         "agpl-3.0+" | "agpl-3.0-or-later" | "agplv3+" => "AGPL-3.0-or-later",
 
         // MPL (Mozilla)
@@ -150,51 +141,19 @@ pub fn normalize(raw: &str) -> String {
 pub fn classify(spdx_id: &str) -> LicenseClass {
     match spdx_id {
         // ---------- Permissive ----------
-        "MIT"
-        | "MIT-0"
-        | "X11"
-        | "Apache-2.0"
-        | "Apache-1.1"
-        | "Apache-1.0"
-        | "BSD-2-Clause"
-        | "BSD-3-Clause"
-        | "BSD-4-Clause"
-        | "0BSD"
-        | "ISC"
-        | "Unlicense"
-        | "CC0-1.0"
-        | "WTFPL"
-        | "PSF-2.0"
-        | "BSL-1.0"
-        | "Zlib"
-        | "Ruby" => LicenseClass::Permissive,
+        "MIT" | "MIT-0" | "X11" | "Apache-2.0" | "Apache-1.1" | "Apache-1.0" | "BSD-2-Clause"
+        | "BSD-3-Clause" | "BSD-4-Clause" | "0BSD" | "ISC" | "Unlicense" | "CC0-1.0" | "WTFPL"
+        | "PSF-2.0" | "BSL-1.0" | "Zlib" | "Ruby" => LicenseClass::Permissive,
 
         // ---------- Copyleft weak (library/file-level) ----------
-        "LGPL-2.0-only"
-        | "LGPL-2.0-or-later"
-        | "LGPL-2.1-only"
-        | "LGPL-2.1-or-later"
-        | "LGPL-3.0-only"
-        | "LGPL-3.0-or-later"
-        | "MPL-1.0"
-        | "MPL-1.1"
-        | "MPL-2.0"
-        | "CDDL-1.0"
-        | "EPL-1.0"
-        | "EPL-2.0"
-        | "EUPL-1.1"
-        | "EUPL-1.2"
-        | "CPAL-1.0"
-        | "Artistic-1.0"
-        | "Artistic-2.0" => LicenseClass::CopyleftWeak,
+        "LGPL-2.0-only" | "LGPL-2.0-or-later" | "LGPL-2.1-only" | "LGPL-2.1-or-later"
+        | "LGPL-3.0-only" | "LGPL-3.0-or-later" | "MPL-1.0" | "MPL-1.1" | "MPL-2.0"
+        | "CDDL-1.0" | "EPL-1.0" | "EPL-2.0" | "EUPL-1.1" | "EUPL-1.2" | "CPAL-1.0"
+        | "Artistic-1.0" | "Artistic-2.0" => LicenseClass::CopyleftWeak,
 
         // ---------- Copyleft strong (project-level) ----------
-        "GPL-2.0-only"
-        | "GPL-2.0-or-later"
-        | "GPL-3.0-only"
-        | "GPL-3.0-or-later"
-        | "AGPL-3.0-only"
-        | "AGPL-3.0-or-later" => LicenseClass::CopyleftStrong,
+        "GPL-2.0-only" | "GPL-2.0-or-later" | "GPL-3.0-only" | "GPL-3.0-or-later"
+        | "AGPL-3.0-only" | "AGPL-3.0-or-later" => LicenseClass::CopyleftStrong,
 
         // ---------- Proprietary ----------
         id if id.starts_with("LicenseRef-Proprietary") => LicenseClass::Proprietary,
@@ -289,7 +248,10 @@ mod tests {
 
     #[test]
     fn classify_proprietary() {
-        assert_eq!(classify("LicenseRef-Proprietary"), LicenseClass::Proprietary);
+        assert_eq!(
+            classify("LicenseRef-Proprietary"),
+            LicenseClass::Proprietary
+        );
     }
 
     #[test]

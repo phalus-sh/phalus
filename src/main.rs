@@ -781,8 +781,6 @@ async fn main() -> Result<()> {
             concurrency,
             output,
             save,
-        } => {
-            cmd_scan(path, offline, concurrency, &output, save).await
-        }
+        } => cmd_scan(path, offline, concurrency, &output, save).await,
     }
 }
