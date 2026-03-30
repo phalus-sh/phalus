@@ -1,0 +1,19 @@
+{
+  "name": "@phalus/core",
+  "version": "0.1.0",
+  "description": "Core domain types and database schema for PHALUS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src --ext .ts",
+    "test": "node --test dist/**/*.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^20.0.0"
+  }
+}

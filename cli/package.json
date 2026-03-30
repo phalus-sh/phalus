@@ -1,0 +1,21 @@
+{
+  "name": "@phalus/cli",
+  "version": "0.1.0",
+  "description": "CLI for PHALUS",
+  "bin": {
+    "phalus": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "lint": "eslint src --ext .ts",
+    "test": "node --test dist/**/*.test.js"
+  },
+  "dependencies": {
+    "@phalus/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@phalus/api",
+  "version": "0.1.0",
+  "description": "REST API server for PHALUS",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "test": "node --test dist/**/*.test.js"
+  },
+  "dependencies": {
+    "@phalus/core": "workspace:*",
+    "express": "^4.18.0",
+    "better-sqlite3": "^9.4.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0"
+  }
+}
