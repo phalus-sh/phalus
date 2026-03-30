@@ -1,5 +1,5 @@
-use crate::license;
 /// SBOM ingestion: parse CycloneDX BOM JSON and SPDX JSON into `ScannedPackage` lists.
+use crate::license;
 use crate::{Ecosystem, ScannedPackage};
 use serde::Deserialize;
 use thiserror::Error;
@@ -25,8 +25,6 @@ struct CycloneDxBom {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CycloneDxComponent {
-    #[serde(rename = "type")]
-    component_type: Option<String>,
     name: String,
     version: Option<String>,
     purl: Option<String>,
