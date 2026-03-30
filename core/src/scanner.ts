@@ -7,6 +7,10 @@ import { scanNpm } from './connectors/npm.js';
 import { scanPip } from './connectors/pip.js';
 import { scanCargo } from './connectors/cargo.js';
 import { scanGo } from './connectors/go.js';
+import { scanMaven } from './connectors/maven.js';
+import { scanRuby } from './connectors/ruby.js';
+import { scanPhp } from './connectors/php.js';
+import { scanNuget } from './connectors/nuget.js';
 import { scanSboms } from './sbom.js';
 import { normalizeLicense, classifyLicense } from './license-data.js';
 import { getPolicy, evaluatePolicy } from './policy.js';
@@ -63,6 +67,10 @@ export async function runScan(
     raw.push(...scanPip(resolvedPath));
     raw.push(...scanCargo(resolvedPath));
     raw.push(...scanGo(resolvedPath));
+    raw.push(...scanMaven(resolvedPath));
+    raw.push(...scanRuby(resolvedPath));
+    raw.push(...scanPhp(resolvedPath));
+    raw.push(...scanNuget(resolvedPath));
     raw.push(...scanSboms(resolvedPath));
 
     // Upsert packages and record scan results

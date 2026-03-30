@@ -1,6 +1,6 @@
 // Core domain types for PHALUS
 
-export type Ecosystem = 'npm' | 'pip' | 'cargo' | 'go' | 'maven' | 'nuget' | 'unknown';
+export type Ecosystem = 'npm' | 'pip' | 'cargo' | 'go' | 'maven' | 'nuget' | 'ruby' | 'php' | 'unknown';
 
 export interface PolicyRules {
   /** Explicit license allow list (SPDX IDs). Allow overrides deny. */
