@@ -128,12 +128,14 @@ Every step is recorded in an append-only audit trail.
 
 ```toml
 [llm]
-agent_a_provider = "anthropic"
+agent_a_provider = "anthropic"    # anthropic | openai | openrouter | ollama | any OpenAI-compatible
 agent_a_model = "claude-sonnet-4-6"
 agent_a_api_key = ""
+agent_a_base_url = ""             # optional: override API endpoint
 agent_b_provider = "anthropic"
 agent_b_model = "claude-sonnet-4-6"
 agent_b_api_key = ""
+agent_b_base_url = ""
 
 [llm.retry]
 max_retries = 3
@@ -184,6 +186,31 @@ PHALUS_LLM__AGENT_A_MODEL=claude-sonnet-4-6
 PHALUS_ISOLATION__MODE=process
 PHALUS_WEB__ENABLED=true
 ```
+
+### Using OpenAI, OpenRouter, or Ollama
+
+Any provider with an OpenAI-compatible `/v1/chat/completions` endpoint works:
+
+```sh
+# OpenAI
+export PHALUS_LLM__AGENT_A_PROVIDER=openai
+export PHALUS_LLM__AGENT_A_MODEL=gpt-4o
+export PHALUS_LLM__AGENT_A_API_KEY=sk-...
+
+# OpenRouter
+export PHALUS_LLM__AGENT_A_PROVIDER=openrouter
+export PHALUS_LLM__AGENT_A_BASE_URL=https://openrouter.ai/api
+export PHALUS_LLM__AGENT_A_MODEL=anthropic/claude-sonnet-4
+export PHALUS_LLM__AGENT_A_API_KEY=sk-or-...
+
+# Ollama (local, no API key needed)
+export PHALUS_LLM__AGENT_A_PROVIDER=ollama
+export PHALUS_LLM__AGENT_A_BASE_URL=http://localhost:11434
+export PHALUS_LLM__AGENT_A_MODEL=llama3
+export PHALUS_LLM__AGENT_A_API_KEY=unused
+```
+
+Set `AGENT_B_*` equivalents for Agent B (can be a different provider/model).
 
 ## Output Licenses
 

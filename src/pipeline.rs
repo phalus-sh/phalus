@@ -9,7 +9,7 @@ use tokio::sync::{broadcast, Mutex};
 
 use crate::agents::analyzer;
 use crate::agents::builder;
-use crate::agents::provider::LlmProvider;
+use crate::agents::provider::{LlmProvider, ProviderKind};
 use crate::audit::{AuditEvent, AuditLogger};
 use crate::cache::CspCache;
 use crate::config::PhalusConfig;
@@ -708,11 +708,13 @@ pub async fn run_agent_a(
     } else {
         Some(config.llm.agent_a_base_url.as_str())
     };
+    let kind = ProviderKind::parse(&config.llm.agent_a_provider);
     let provider = LlmProvider::new(
         api_key,
         &config.llm.agent_a_model,
         base_url,
         config.llm.retry.clone(),
+        kind,
     );
 
     let system = analyzer::system_prompt();
@@ -762,11 +764,13 @@ pub async fn run_agent_b(
     } else {
         Some(config.llm.agent_b_base_url.as_str())
     };
+    let kind = ProviderKind::parse(&config.llm.agent_b_provider);
     let provider = LlmProvider::new(
         api_key,
         &config.llm.agent_b_model,
         base_url,
         config.llm.retry.clone(),
+        kind,
     );
 
     let system = builder::system_prompt();

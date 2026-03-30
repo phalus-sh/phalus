@@ -20,16 +20,78 @@ pub enum ProviderError {
     RetriesExhausted { attempts: u32, last_error: String },
 }
 
+/// Which wire protocol to use when talking to the LLM backend.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ProviderKind {
+    /// Anthropic Messages API (`/v1/messages`).
+    Anthropic,
+    /// OpenAI-compatible Chat Completions API (`/v1/chat/completions`).
+    /// Works with OpenAI, OpenRouter, Ollama, vLLM, LiteLLM, etc.
+    OpenAi,
+}
+
+impl ProviderKind {
+    /// Parse from the config string. Anything not explicitly "anthropic" is
+    /// treated as OpenAI-compatible.
+    pub fn parse(s: &str) -> Self {
+        match s.to_ascii_lowercase().as_str() {
+            "anthropic" => Self::Anthropic,
+            _ => Self::OpenAi,
+        }
+    }
+
+    fn default_base_url(&self) -> &str {
+        match self {
+            Self::Anthropic => "https://api.anthropic.com",
+            Self::OpenAi => "https://api.openai.com",
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Anthropic wire types
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Serialize)]
 struct AnthropicRequest {
     model: String,
     max_tokens: u32,
     system: String,
-    messages: Vec<Message>,
+    messages: Vec<ChatMessage>,
 }
 
+// ---------------------------------------------------------------------------
+// OpenAI wire types
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+struct OpenAiRequest {
+    model: String,
+    max_tokens: u32,
+    messages: Vec<ChatMessage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiResponse {
+    choices: Vec<OpenAiChoice>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiChoice {
+    message: OpenAiMessage,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiMessage {
+    content: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Shared types
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Serialize, Deserialize)]
-struct Message {
+struct ChatMessage {
     role: String,
     content: String,
 }
@@ -44,21 +106,34 @@ struct ContentBlock {
     text: Option<String>,
 }
 
+// ---------------------------------------------------------------------------
+// LlmProvider
+// ---------------------------------------------------------------------------
+
 pub struct LlmProvider {
     client: Client,
     api_key: String,
     model: String,
     base_url: String,
+    kind: ProviderKind,
     retry: RetryConfig,
 }
 
 impl LlmProvider {
-    pub fn new(api_key: &str, model: &str, base_url: Option<&str>, retry: RetryConfig) -> Self {
+    pub fn new(
+        api_key: &str,
+        model: &str,
+        base_url: Option<&str>,
+        retry: RetryConfig,
+        kind: ProviderKind,
+    ) -> Self {
+        let base_url = base_url.unwrap_or_else(|| kind.default_base_url());
         Self {
             client: Client::new(),
             api_key: api_key.to_string(),
             model: model.to_string(),
-            base_url: base_url.unwrap_or("https://api.anthropic.com").to_string(),
+            base_url: base_url.to_string(),
+            kind,
             retry,
         }
     }
@@ -73,16 +148,6 @@ impl LlmProvider {
         user_prompt: &str,
         max_tokens: u32,
     ) -> Result<String, ProviderError> {
-        let request = AnthropicRequest {
-            model: self.model.clone(),
-            max_tokens,
-            system: system_prompt.to_string(),
-            messages: vec![Message {
-                role: "user".into(),
-                content: user_prompt.to_string(),
-            }],
-        };
-
         let max_attempts = self.retry.max_retries + 1;
         let mut last_error = String::new();
 
@@ -96,16 +161,24 @@ impl LlmProvider {
                 sleep(Duration::from_millis(backoff_ms)).await;
             }
 
-            match self.attempt_once(&request).await {
+            let result = match self.kind {
+                ProviderKind::Anthropic => {
+                    self.attempt_anthropic(system_prompt, user_prompt, max_tokens)
+                        .await
+                }
+                ProviderKind::OpenAi => {
+                    self.attempt_openai(system_prompt, user_prompt, max_tokens)
+                        .await
+                }
+            };
+
+            match result {
                 Ok(text) => return Ok(text),
                 Err(e) => {
                     last_error = e.to_string();
                     if !is_retryable(&e) {
                         return Err(e);
                     }
-                    // For rate-limit responses, honour Retry-After if available via the
-                    // error message (wiremock and real Anthropic both surface it there).
-                    // The exponential backoff already runs above; nothing extra needed.
                 }
             }
         }
@@ -116,7 +189,26 @@ impl LlmProvider {
         })
     }
 
-    async fn attempt_once(&self, request: &AnthropicRequest) -> Result<String, ProviderError> {
+    // -----------------------------------------------------------------------
+    // Anthropic Messages API
+    // -----------------------------------------------------------------------
+
+    async fn attempt_anthropic(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+        max_tokens: u32,
+    ) -> Result<String, ProviderError> {
+        let request = AnthropicRequest {
+            model: self.model.clone(),
+            max_tokens,
+            system: system_prompt.to_string(),
+            messages: vec![ChatMessage {
+                role: "user".into(),
+                content: user_prompt.to_string(),
+            }],
+        };
+
         let timeout = Duration::from_secs(self.retry.timeout_secs);
 
         let fut = self
@@ -125,7 +217,7 @@ impl LlmProvider {
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", "2023-06-01")
             .header("content-type", "application/json")
-            .json(request)
+            .json(&request)
             .send();
 
         let resp = tokio::time::timeout(timeout, fut)
@@ -150,18 +242,72 @@ impl LlmProvider {
             .and_then(|c| c.text.clone())
             .ok_or(ProviderError::EmptyResponse)
     }
+
+    // -----------------------------------------------------------------------
+    // OpenAI-compatible Chat Completions API
+    // -----------------------------------------------------------------------
+
+    async fn attempt_openai(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+        max_tokens: u32,
+    ) -> Result<String, ProviderError> {
+        let request = OpenAiRequest {
+            model: self.model.clone(),
+            max_tokens,
+            messages: vec![
+                ChatMessage {
+                    role: "system".into(),
+                    content: system_prompt.to_string(),
+                },
+                ChatMessage {
+                    role: "user".into(),
+                    content: user_prompt.to_string(),
+                },
+            ],
+        };
+
+        let timeout = Duration::from_secs(self.retry.timeout_secs);
+
+        let fut = self
+            .client
+            .post(format!("{}/v1/chat/completions", self.base_url))
+            .header("authorization", format!("Bearer {}", self.api_key))
+            .header("content-type", "application/json")
+            .json(&request)
+            .send();
+
+        let resp = tokio::time::timeout(timeout, fut)
+            .await
+            .map_err(|_| ProviderError::Timeout {
+                timeout_secs: self.retry.timeout_secs,
+            })?
+            .map_err(ProviderError::Http)?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(ProviderError::Api {
+                status,
+                message: body,
+            });
+        }
+
+        let body: OpenAiResponse = resp.json().await.map_err(ProviderError::Http)?;
+        body.choices
+            .first()
+            .and_then(|c| c.message.content.clone())
+            .ok_or(ProviderError::EmptyResponse)
+    }
 }
 
 /// Returns true for errors that are safe to retry.
 fn is_retryable(err: &ProviderError) -> bool {
     match err {
-        // Timeout is always retryable.
         ProviderError::Timeout { .. } => true,
-        // Rate limit (429) and server errors (5xx) are retryable.
         ProviderError::Api { status, .. } => *status == 429 || *status >= 500,
-        // Connection-level errors are retryable.
         ProviderError::Http(e) => e.is_timeout() || e.is_connect(),
-        // Non-retryable.
         ProviderError::EmptyResponse | ProviderError::RetriesExhausted { .. } => false,
     }
 }
@@ -175,36 +321,77 @@ mod tests {
     fn default_retry() -> RetryConfig {
         RetryConfig {
             max_retries: 3,
-            initial_backoff_ms: 1, // fast for tests
+            initial_backoff_ms: 1,
             timeout_secs: 5,
         }
     }
 
-    fn make_provider(base_url: &str) -> LlmProvider {
+    fn make_anthropic_provider(base_url: &str) -> LlmProvider {
         LlmProvider::new(
             "test-key",
             "claude-sonnet-4-6",
             Some(base_url),
             default_retry(),
+            ProviderKind::Anthropic,
         )
     }
 
-    fn success_body() -> serde_json::Value {
+    fn make_openai_provider(base_url: &str) -> LlmProvider {
+        LlmProvider::new(
+            "test-key",
+            "gpt-4o",
+            Some(base_url),
+            default_retry(),
+            ProviderKind::OpenAi,
+        )
+    }
+
+    fn anthropic_success_body() -> serde_json::Value {
         serde_json::json!({
             "content": [{"type": "text", "text": "hello"}]
         })
     }
 
+    fn openai_success_body() -> serde_json::Value {
+        serde_json::json!({
+            "choices": [{"message": {"role": "assistant", "content": "hello"}}]
+        })
+    }
+
     #[test]
-    fn test_provider_construction() {
+    fn test_provider_kind_from_str() {
+        assert_eq!(ProviderKind::parse("anthropic"), ProviderKind::Anthropic);
+        assert_eq!(ProviderKind::parse("Anthropic"), ProviderKind::Anthropic);
+        assert_eq!(ProviderKind::parse("openai"), ProviderKind::OpenAi);
+        assert_eq!(ProviderKind::parse("openrouter"), ProviderKind::OpenAi);
+        assert_eq!(ProviderKind::parse("ollama"), ProviderKind::OpenAi);
+        assert_eq!(ProviderKind::parse("vllm"), ProviderKind::OpenAi);
+    }
+
+    #[test]
+    fn test_provider_construction_anthropic() {
         let provider = LlmProvider::new(
             "test-key",
             "claude-sonnet-4-6",
             None,
             RetryConfig::default(),
+            ProviderKind::Anthropic,
         );
         assert_eq!(provider.model(), "claude-sonnet-4-6");
         assert_eq!(provider.base_url, "https://api.anthropic.com");
+    }
+
+    #[test]
+    fn test_provider_construction_openai() {
+        let provider = LlmProvider::new(
+            "test-key",
+            "gpt-4o",
+            None,
+            RetryConfig::default(),
+            ProviderKind::OpenAi,
+        );
+        assert_eq!(provider.model(), "gpt-4o");
+        assert_eq!(provider.base_url, "https://api.openai.com");
     }
 
     #[test]
@@ -212,22 +399,59 @@ mod tests {
         let provider = LlmProvider::new(
             "key",
             "model",
-            Some("http://localhost:8080"),
+            Some("http://localhost:11434"),
             RetryConfig::default(),
+            ProviderKind::OpenAi,
         );
-        assert_eq!(provider.base_url, "http://localhost:8080");
+        assert_eq!(provider.base_url, "http://localhost:11434");
     }
 
     #[tokio::test]
-    async fn test_successful_request() {
+    async fn test_anthropic_successful_request() {
         let server = MockServer::start().await;
         Mock::given(method("POST"))
             .and(path("/v1/messages"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(success_body()))
+            .respond_with(ResponseTemplate::new(200).set_body_json(anthropic_success_body()))
             .mount(&server)
             .await;
 
-        let provider = make_provider(&server.uri());
+        let provider = make_anthropic_provider(&server.uri());
+        let result = provider.complete("sys", "user", 100).await;
+        assert_eq!(result.unwrap(), "hello");
+    }
+
+    #[tokio::test]
+    async fn test_openai_successful_request() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(openai_success_body()))
+            .mount(&server)
+            .await;
+
+        let provider = make_openai_provider(&server.uri());
+        let result = provider.complete("sys", "user", 100).await;
+        assert_eq!(result.unwrap(), "hello");
+    }
+
+    #[tokio::test]
+    async fn test_openai_retries_on_500() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(500).set_body_string("internal error"))
+            .up_to_n_times(2)
+            .mount(&server)
+            .await;
+
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(openai_success_body()))
+            .mount(&server)
+            .await;
+
+        let provider = make_openai_provider(&server.uri());
         let result = provider.complete("sys", "user", 100).await;
         assert_eq!(result.unwrap(), "hello");
     }
@@ -236,7 +460,6 @@ mod tests {
     async fn test_retries_on_500() {
         let server = MockServer::start().await;
 
-        // First two attempts return 500, third succeeds.
         Mock::given(method("POST"))
             .and(path("/v1/messages"))
             .respond_with(ResponseTemplate::new(500).set_body_string("internal error"))
@@ -246,11 +469,11 @@ mod tests {
 
         Mock::given(method("POST"))
             .and(path("/v1/messages"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(success_body()))
+            .respond_with(ResponseTemplate::new(200).set_body_json(anthropic_success_body()))
             .mount(&server)
             .await;
 
-        let provider = make_provider(&server.uri());
+        let provider = make_anthropic_provider(&server.uri());
         let result = provider.complete("sys", "user", 100).await;
         assert_eq!(result.unwrap(), "hello");
     }
@@ -268,11 +491,11 @@ mod tests {
 
         Mock::given(method("POST"))
             .and(path("/v1/messages"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(success_body()))
+            .respond_with(ResponseTemplate::new(200).set_body_json(anthropic_success_body()))
             .mount(&server)
             .await;
 
-        let provider = make_provider(&server.uri());
+        let provider = make_anthropic_provider(&server.uri());
         let result = provider.complete("sys", "user", 100).await;
         assert_eq!(result.unwrap(), "hello");
     }
@@ -296,6 +519,7 @@ mod tests {
                 initial_backoff_ms: 1,
                 timeout_secs: 5,
             },
+            ProviderKind::Anthropic,
         );
         let result = provider.complete("sys", "user", 100).await;
         let err = result.unwrap_err();
@@ -309,21 +533,19 @@ mod tests {
     async fn test_non_retryable_4xx_fails_immediately() {
         let server = MockServer::start().await;
 
-        // 400 Bad Request should NOT be retried.
         Mock::given(method("POST"))
             .and(path("/v1/messages"))
             .respond_with(ResponseTemplate::new(400).set_body_string("bad request"))
             .mount(&server)
             .await;
 
-        let provider = make_provider(&server.uri());
+        let provider = make_anthropic_provider(&server.uri());
         let result = provider.complete("sys", "user", 100).await;
         let err = result.unwrap_err();
         assert!(
             matches!(err, ProviderError::Api { status: 400, .. }),
             "expected Api 400 error, got: {err}"
         );
-        // Verify only one request was made (no retries).
         assert_eq!(server.received_requests().await.unwrap().len(), 1);
     }
 
@@ -331,12 +553,11 @@ mod tests {
     async fn test_timeout_is_retried() {
         let server = MockServer::start().await;
 
-        // First request hangs beyond timeout, second succeeds immediately.
         Mock::given(method("POST"))
             .and(path("/v1/messages"))
             .respond_with(
                 ResponseTemplate::new(200)
-                    .set_body_json(success_body())
+                    .set_body_json(anthropic_success_body())
                     .set_delay(Duration::from_secs(10)),
             )
             .up_to_n_times(1)
@@ -345,7 +566,7 @@ mod tests {
 
         Mock::given(method("POST"))
             .and(path("/v1/messages"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(success_body()))
+            .respond_with(ResponseTemplate::new(200).set_body_json(anthropic_success_body()))
             .mount(&server)
             .await;
 
@@ -356,8 +577,9 @@ mod tests {
             RetryConfig {
                 max_retries: 2,
                 initial_backoff_ms: 1,
-                timeout_secs: 1, // short timeout to trigger on the first request
+                timeout_secs: 1,
             },
+            ProviderKind::Anthropic,
         );
         let result = provider.complete("sys", "user", 100).await;
         assert_eq!(result.unwrap(), "hello");
