@@ -30,6 +30,18 @@ This protects against a malicious or misbehaving LLM response that includes file
 
 The same checks are applied to both the implementation files written by Agent B and the CSP document files written during the firewall stage.
 
+### CSP cache path sanitization
+
+The CSP cache (`~/.phalus/cache/csp/`) sanitizes all inputs used to construct cache filenames. Package names and versions have path separators (`/`, `\`) and traversal sequences (`..`) replaced with underscores before being used in file paths. Cache writes use an atomic write-then-rename pattern (write to `.tmp`, then rename) to prevent partial reads from concurrent access.
+
+---
+
+## Container Firewall Hardening
+
+When running in `container` isolation mode, the firewall transfers CSP files between Agent A and Agent B containers. The file copy command is executed directly as process arguments rather than through a shell interpreter. This prevents shell injection attacks where a malicious package name containing shell metacharacters (`$()`, backticks, pipes) could execute arbitrary commands inside the container.
+
+Temporary files used during the firewall crossing are named using UUID v4 identifiers rather than package metadata, providing an additional layer of protection against filename-based attacks.
+
 ---
 
 ## API Key Redaction
@@ -75,7 +87,7 @@ PHALUS makes outbound HTTPS requests to:
 - Package registry APIs (npm, PyPI, crates.io, proxy.golang.org)
 - GitHub API (`api.github.com`) for README and type definition fetching
 - Documentation sites linked from package metadata
-- LLM provider APIs (Anthropic, OpenAI, or a configured custom endpoint)
+- LLM provider APIs (Anthropic, OpenAI, OpenRouter, Ollama, vLLM, or any configured custom endpoint)
 
 It does not make any other outbound connections. No telemetry, no usage reporting, no update checks.
 

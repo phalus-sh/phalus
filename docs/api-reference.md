@@ -20,6 +20,10 @@ All request and response bodies are JSON unless otherwise noted. All timestamps 
 | `GET` | `/api/packages/{name}/csp` | Get the CSP specification for a package |
 | `GET` | `/api/packages/{name}/audit` | Get audit log entries for a package |
 | `GET` | `/api/packages/{name}/code` | Get generated source files for a package |
+| `POST` | `/api/scans` | Trigger a new license scan |
+| `GET` | `/api/scans` | List all stored scan results |
+| `GET` | `/api/scans/{id}` | Retrieve a specific scan result |
+| `GET` | `/api/licenses` | Aggregated license statistics across all scans |
 
 ---
 
@@ -444,6 +448,165 @@ Binary files that cannot be decoded as UTF-8 are omitted.
   "error": "failed to read files: <OS error>"
 }
 ```
+
+---
+
+## Scan Endpoints
+
+The scan endpoints expose the license scanning functionality through the REST API. Scan results are stored in `~/.phalus/scans/` and persist across server restarts.
+
+---
+
+## `POST /api/scans`
+
+Trigger a new license scan on a directory or manifest file. The scan runs synchronously and returns the full result.
+
+### Request
+
+```json
+{
+  "path": "/absolute/or/relative/path",
+  "offline": false,
+  "concurrency": 8
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `path` | string | Yes | — | Path to a directory, manifest file, or SBOM file |
+| `offline` | boolean | No | `false` | Skip registry lookups |
+| `concurrency` | integer | No | `8` | Max concurrent registry lookups |
+
+### Response `200 OK`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "path": "/home/user/my-project",
+  "scanned_at": "2026-03-30T14:00:00Z",
+  "packages": [
+    {
+      "name": "lodash",
+      "version": "4.17.21",
+      "ecosystem": "npm",
+      "raw_license": "MIT",
+      "spdx_license": "MIT",
+      "classification": "permissive",
+      "source": "registry"
+    }
+  ],
+  "manifest_files": ["package.json"],
+  "sbom_files": []
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | UUID of the scan result |
+| `path` | string | Absolute path that was scanned |
+| `scanned_at` | string | RFC 3339 timestamp |
+| `packages` | array | Scanned packages with license data |
+| `packages[].name` | string | Package name |
+| `packages[].version` | string | Resolved version |
+| `packages[].ecosystem` | string | `npm`, `pypi`, `crates`, or `go` |
+| `packages[].raw_license` | string | License string as found in manifest or registry |
+| `packages[].spdx_license` | string | Normalized SPDX identifier |
+| `packages[].classification` | string | `permissive`, `copyleft-weak`, `copyleft-strong`, `proprietary`, or `unknown` |
+| `packages[].source` | string | Where the license was found: `manifest`, `registry`, `sbom:cyclonedx`, or `sbom:spdx` |
+| `manifest_files` | array | Manifest files discovered during scan |
+| `sbom_files` | array | SBOM files discovered during scan |
+
+### Response `400 Bad Request`
+
+```json
+{
+  "error": "path does not exist"
+}
+```
+
+---
+
+## `GET /api/scans`
+
+List all stored scan results as summaries.
+
+### Response `200 OK`
+
+```json
+{
+  "scans": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "path": "/home/user/my-project",
+      "scanned_at": "2026-03-30T14:00:00Z",
+      "package_count": 42,
+      "manifest_files": 1,
+      "sbom_files": 0
+    }
+  ]
+}
+```
+
+Results are sorted by `scanned_at` in descending order (most recent first).
+
+---
+
+## `GET /api/scans/{id}`
+
+Retrieve the full result of a specific scan, including all package license data.
+
+### Path parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `id` | Scan UUID returned by `POST /api/scans` or shown in scan list |
+
+### Response `200 OK`
+
+Same schema as the `POST /api/scans` response.
+
+### Response `404 Not Found`
+
+```json
+{
+  "error": "scan not found"
+}
+```
+
+---
+
+## `GET /api/licenses`
+
+Return aggregated license statistics across all stored scans. Each unique license is listed with its SPDX identifier, classification, total count, and the ecosystems in which it appears.
+
+### Response `200 OK`
+
+```json
+{
+  "MIT": {
+    "license": "MIT",
+    "spdx_id": "MIT",
+    "classification": "permissive",
+    "count": 127,
+    "ecosystems": ["npm", "crates"]
+  },
+  "GPL-2.0-only": {
+    "license": "GPL-2.0-only",
+    "spdx_id": "GPL-2.0-only",
+    "classification": "copyleft-strong",
+    "count": 3,
+    "ecosystems": ["npm"]
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `license` | string | Display name |
+| `spdx_id` | string | SPDX canonical identifier |
+| `classification` | string | License class: `permissive`, `copyleft-weak`, `copyleft-strong`, `proprietary`, `unknown` |
+| `count` | integer | Total packages with this license across all scans |
+| `ecosystems` | array | Ecosystems where this license appears |
 
 ---
 

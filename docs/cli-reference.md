@@ -18,6 +18,7 @@ Run `phalus --help` for a summary or `phalus [COMMAND] --help` for per-command h
 | [`run`](#run) | Run the full clean room pipeline from a manifest |
 | [`run-one`](#run-one) | Run the pipeline on a single package without a manifest |
 | [`build`](#build) | Run Agent B only from an existing CSP |
+| [`scan`](#scan) | Scan a project for dependency licenses and SBOM data |
 | [`inspect`](#inspect) | Inspect a completed job's output directory |
 | [`validate`](#validate) | Re-run validation on an existing output directory |
 | [`config`](#config) | Print the active configuration (API keys redacted) |
@@ -240,6 +241,103 @@ The `build` command enables a split pipeline where Agent A and Agent B run as se
 - **Iterating on the implementation** without re-running analysis
 
 See the [Cookbook](cookbook.md) for detailed examples of these workflows.
+
+---
+
+## scan
+
+Scan a project directory, manifest file, or SBOM file for dependency licenses. Identifies all dependencies, resolves their license metadata from package registries, normalizes license strings to SPDX identifiers, and classifies them into risk buckets.
+
+Supports reading manifests (`package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`) and SBOM files (CycloneDX JSON 1.4+, SPDX JSON 2.3+).
+
+```
+phalus scan <PATH> [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `PATH` | Directory to walk, manifest file, or SBOM file (e.g. `bom.json`, `sbom.json`) |
+
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--offline` | false | Skip registry lookups; report only what manifests and SBOMs declare locally |
+| `--concurrency <n>` | `8` | Maximum concurrent registry lookups |
+| `--output <format>` | `text` | Output format: `text` (human-readable table) or `json` |
+| `--save` | false | Persist the scan result to `~/.phalus/scans/{id}.json` for later retrieval |
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Scan completed successfully |
+| `1` | Scan failed (invalid path, parse error, etc.) |
+
+### License classification
+
+Each dependency license is normalized to an SPDX identifier and classified:
+
+| Class | Examples | Risk |
+|-------|----------|------|
+| Permissive | MIT, Apache-2.0, BSD-2-Clause, ISC | Low |
+| Copyleft (weak) | LGPL-2.1, MPL-2.0, EPL-2.0 | Medium |
+| Copyleft (strong) | GPL-2.0, GPL-3.0, AGPL-3.0 | High |
+| Proprietary | Commercial, All Rights Reserved | Review required |
+| Unknown | Unrecognized license strings | Review required |
+
+### Supported SBOM formats
+
+| Format | Detection |
+|--------|-----------|
+| CycloneDX JSON (1.4+) | Files named `bom.json`, `cyclonedx.json`, or containing `bomFormat` key |
+| SPDX JSON (2.3+) | Files named `sbom.json`, `spdx.json`, or containing `spdxVersion` key |
+
+### Examples
+
+```bash
+# Scan a project directory (finds all manifests and SBOMs recursively)
+phalus scan ./my-project
+
+# Scan a single manifest
+phalus scan package.json
+
+# Scan a CycloneDX SBOM
+phalus scan bom.json
+
+# Offline scan (no registry calls)
+phalus scan ./my-project --offline
+
+# JSON output, saved for later retrieval via the API
+phalus scan ./my-project --output json --save
+
+# High concurrency for large projects
+phalus scan ./monorepo --concurrency 16
+```
+
+**Sample text output:**
+
+```
+Scan: ./my-project (42 packages from 1 manifest, 0 SBOMs)
+
+PACKAGE                VERSION     ECOSYSTEM  LICENSE         CLASS
+---------------------------------------------------------------------------
+lodash                 4.17.21     npm        MIT             permissive
+express                4.18.2      npm        MIT             permissive
+pg                     8.11.3      npm        MIT             permissive
+react                  18.2.0      npm        MIT             permissive
+node-forge             1.3.1       npm        BSD-3-Clause    permissive
+sharp                  0.33.2      npm        Apache-2.0      permissive
+readline-sync          1.4.10      npm        MIT             permissive
+
+Summary: 40 permissive, 1 copyleft-weak, 0 copyleft-strong, 1 unknown
+```
+
+### Stored scans
+
+When `--save` is used, the scan result is persisted to `~/.phalus/scans/{uuid}.json`. Stored scans can be listed and retrieved through the [REST API](api-reference.md#scan-endpoints).
 
 ---
 

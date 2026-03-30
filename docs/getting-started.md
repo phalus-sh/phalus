@@ -8,7 +8,7 @@
 | Pre-built binary | None — download and run |
 | Docker | Docker Engine 24 or later |
 
-You also need at least one LLM API key. Both agents default to `claude-sonnet-4-6` (Anthropic), but each agent can be configured independently and can use any supported provider.
+You also need at least one LLM API key. Both agents default to `claude-sonnet-4-6` (Anthropic), but each agent can be configured independently with any provider that supports the Anthropic or OpenAI chat completions API — including OpenAI, OpenRouter, Ollama, vLLM, and LiteLLM.
 
 ---
 
@@ -88,6 +88,24 @@ Verify that the configuration is loaded correctly (API keys are always redacted 
 ```bash
 phalus config
 ```
+
+**Using alternative providers** — set the provider and base URL for OpenAI-compatible endpoints:
+
+```bash
+# OpenAI
+export PHALUS_LLM__AGENT_A_PROVIDER=openai
+export PHALUS_LLM__AGENT_A_BASE_URL=https://api.openai.com
+export PHALUS_LLM__AGENT_A_MODEL=gpt-4o
+export PHALUS_LLM__AGENT_A_API_KEY="sk-..."
+
+# Ollama (local)
+export PHALUS_LLM__AGENT_A_PROVIDER=ollama
+export PHALUS_LLM__AGENT_A_BASE_URL=http://localhost:11434
+export PHALUS_LLM__AGENT_A_MODEL=llama3
+export PHALUS_LLM__AGENT_A_API_KEY=unused
+```
+
+See [Configuration — OpenAI-Compatible Providers](configuration.md#openai-compatible-providers) for full examples including OpenRouter, vLLM, and mixed-provider setups.
 
 ---
 
@@ -212,6 +230,18 @@ phalus build ./phalus-output/lodash/.cleanroom/csp/
 ```
 
 See the [Cookbook](cookbook.md) for advanced workflows including injecting custom security constraints and batch processing with review gates.
+
+---
+
+## Scan Dependencies for Licenses
+
+Before reimplementing, you can audit your dependency licenses:
+
+```bash
+phalus scan ./my-project
+```
+
+This walks the project for manifests and SBOMs, resolves license metadata from registries, and classifies each dependency. Use `--save` to persist results and query them through the API later. See the [CLI reference](cli-reference.md#scan) for full options.
 
 ---
 

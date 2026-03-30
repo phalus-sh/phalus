@@ -291,6 +291,93 @@ phalus run package.json
 
 ---
 
+## OpenAI-Compatible Providers
+
+PHALUS supports any LLM endpoint that implements the OpenAI chat completions wire protocol. Set `agent_a_provider` or `agent_b_provider` to anything other than `"anthropic"` and PHALUS will use the OpenAI-compatible request format (`/v1/chat/completions` with `Authorization: Bearer` header) instead of the Anthropic format.
+
+Each agent can use a different provider. This is useful for cost optimization (e.g. a cheaper model for Agent A analysis, a stronger model for Agent B implementation) or for using locally-hosted models that were not trained on the target codebase.
+
+### Provider detection
+
+| `provider` value | Wire protocol | Default base URL |
+|------------------|---------------|------------------|
+| `anthropic` | Anthropic (`/v1/messages`, `x-api-key` header) | `https://api.anthropic.com` |
+| Any other value | OpenAI-compatible (`/v1/chat/completions`, `Bearer` token) | Must set `base_url` |
+
+### Example: OpenAI
+
+```toml
+[llm]
+agent_a_provider = "openai"
+agent_a_model    = "gpt-4o"
+agent_a_api_key  = "sk-..."
+agent_a_base_url = "https://api.openai.com"
+
+agent_b_provider = "openai"
+agent_b_model    = "gpt-4o"
+agent_b_api_key  = "sk-..."
+agent_b_base_url = "https://api.openai.com"
+```
+
+### Example: OpenRouter
+
+```toml
+[llm]
+agent_a_provider = "openrouter"
+agent_a_model    = "anthropic/claude-sonnet-4"
+agent_a_api_key  = "sk-or-..."
+agent_a_base_url = "https://openrouter.ai/api"
+
+agent_b_provider = "openrouter"
+agent_b_model    = "anthropic/claude-sonnet-4"
+agent_b_api_key  = "sk-or-..."
+agent_b_base_url = "https://openrouter.ai/api"
+```
+
+### Example: Ollama (local, no API key)
+
+```toml
+[llm]
+agent_a_provider = "ollama"
+agent_a_model    = "llama3"
+agent_a_api_key  = "unused"
+agent_a_base_url = "http://localhost:11434"
+
+agent_b_provider = "ollama"
+agent_b_model    = "llama3"
+agent_b_api_key  = "unused"
+agent_b_base_url = "http://localhost:11434"
+```
+
+### Example: Mixed providers
+
+Use Anthropic for analysis and a local model for implementation:
+
+```toml
+[llm]
+agent_a_provider = "anthropic"
+agent_a_model    = "claude-sonnet-4-6"
+agent_a_api_key  = "sk-ant-..."
+
+agent_b_provider = "ollama"
+agent_b_model    = "codellama:34b"
+agent_b_api_key  = "unused"
+agent_b_base_url = "http://localhost:11434"
+```
+
+### Example: vLLM / LiteLLM
+
+Any OpenAI-compatible server works by setting the `base_url`:
+
+```bash
+export PHALUS_LLM__AGENT_A_PROVIDER=vllm
+export PHALUS_LLM__AGENT_A_BASE_URL=http://localhost:8000
+export PHALUS_LLM__AGENT_A_MODEL=meta-llama/Llama-3-70b
+export PHALUS_LLM__AGENT_A_API_KEY=token-abc123
+```
+
+---
+
 ## Precedence
 
 From lowest to highest priority:

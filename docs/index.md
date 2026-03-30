@@ -28,6 +28,14 @@ No accounts. No payments. No SaaS. Your machine, your API keys, your output.
 
     Choose any permissive license for the generated code. Optionally reimplement in a different language to maximise structural divergence from the original.
 
+- **License scanning**
+
+    Scan projects for dependency licenses before reimplementing. Reads manifests and SBOMs (CycloneDX, SPDX), resolves licenses from registries, normalizes to SPDX identifiers, and classifies risk.
+
+- **Multi-provider LLM support**
+
+    Use Anthropic, OpenAI, OpenRouter, Ollama, vLLM, or any OpenAI-compatible endpoint. Each agent can use a different provider and model independently.
+
 - **CSP caching**
 
     The Clean Room Specification Pack produced by Agent A is cached by content hash. Repeated runs on unchanged packages skip Agent A entirely.
