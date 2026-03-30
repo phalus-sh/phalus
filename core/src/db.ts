@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'node:path';
-import { CREATE_TABLES_SQL, SCHEMA_VERSION } from './schema.js';
+import { CREATE_TABLES_SQL, MIGRATIONS_V2, SCHEMA_VERSION } from './schema.js';
 
 let _db: Database.Database | null = null;
 
@@ -17,7 +17,15 @@ export function initDb(dbPath?: string): Database.Database {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(CREATE_TABLES_SQL);
-  // Record migration
+  // Run v2 migrations for existing databases (swallow duplicate-column errors)
+  for (const sql of MIGRATIONS_V2) {
+    try {
+      db.exec(sql);
+    } catch {
+      // Column already exists — safe to ignore
+    }
+  }
+  // Record migration version
   db.prepare(
     `INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`
   ).run(SCHEMA_VERSION);

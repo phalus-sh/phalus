@@ -56,4 +56,9 @@ describe('classifyLicense', () => {
     expect(classifyLicense('')).toBe('unknown');
     expect(classifyLicense('NONE')).toBe('unknown');
   });
+
+  it('returns unknown for LicenseRef-* custom references', () => {
+    expect(classifyLicense('LicenseRef-Custom')).toBe('unknown');
+    expect(classifyLicense('LicenseRef-scancode-proprietary-license')).toBe('unknown');
+  });
 });

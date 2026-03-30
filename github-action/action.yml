@@ -1,0 +1,100 @@
+name: 'PHALUS License Scan'
+description: 'Scan your repository dependencies for license compliance issues and block PRs on violations.'
+author: 'PHALUS'
+
+inputs:
+  policy:
+    description: 'Policy name or ID to enforce (e.g. permissive-only, no-copyleft-strong, no-proprietary). Leave empty to scan without enforcement.'
+    required: false
+    default: ''
+  path:
+    description: 'Directory to scan. Defaults to the repository root.'
+    required: false
+    default: '.'
+  api-url:
+    description: 'PHALUS API server URL (optional, for server-backed mode). Leave empty for local CLI-only scan.'
+    required: false
+    default: ''
+  api-key:
+    description: 'PHALUS API key (required when api-url is set).'
+    required: false
+    default: ''
+  fail-on-violation:
+    description: 'Fail the workflow step when policy violations are found. Defaults to true when a policy is set.'
+    required: false
+    default: 'true'
+  phalus-version:
+    description: 'Version of @phalus/cli to install. Defaults to latest.'
+    required: false
+    default: 'latest'
+
+outputs:
+  verdict:
+    description: '"pass" if no violations, "fail" if violations found, "error" if the scan could not complete.'
+    value: ${{ steps.evaluate.outputs.verdict }}
+  violation-count:
+    description: 'Number of policy violations found.'
+    value: ${{ steps.evaluate.outputs.violation-count }}
+  scan-id:
+    description: 'PHALUS scan run ID for traceability.'
+    value: ${{ steps.evaluate.outputs.scan-id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install PHALUS CLI
+      shell: bash
+      run: npm install -g @phalus/cli@${{ inputs.phalus-version }}
+
+    - name: Run PHALUS scan
+      id: run-scan
+      shell: bash
+      env:
+        PHALUS_API_KEY: ${{ inputs.api-key }}
+        PHALUS_API_URL: ${{ inputs.api-url }}
+      run: |
+        POLICY_FLAG=""
+        if [ -n "${{ inputs.policy }}" ]; then
+          POLICY_FLAG="--policy ${{ inputs.policy }}"
+        fi
+
+        FAIL_FLAG="--no-fail-on-violation"
+        if [ "${{ inputs.fail-on-violation }}" = "true" ] && [ -n "${{ inputs.policy }}" ]; then
+          FAIL_FLAG="--fail-on-violation"
+        fi
+
+        phalus scan "${{ inputs.path }}" $POLICY_FLAG $FAIL_FLAG --json \
+          > "$RUNNER_TEMP/phalus-scan.json" 2>"$RUNNER_TEMP/phalus-scan-stderr.txt"
+        echo "scan-exit-code=$?" >> "$GITHUB_OUTPUT"
+
+    - name: Evaluate scan result
+      id: evaluate
+      shell: bash
+      run: |
+        node "${{ github.action_path }}/post-comment.mjs" \
+          --scan-file "$RUNNER_TEMP/phalus-scan.json" \
+          --stderr-file "$RUNNER_TEMP/phalus-scan-stderr.txt" \
+          --policy "${{ inputs.policy }}" \
+          --github-output "$GITHUB_OUTPUT" \
+          --pr-number "${{ github.event.pull_request.number }}" \
+          --repo "${{ github.repository }}" \
+          --github-token "${{ github.token }}"
+
+    - name: Fail on violations
+      if: steps.evaluate.outputs.verdict == 'fail' && inputs.fail-on-violation == 'true'
+      shell: bash
+      run: |
+        echo "PHALUS scan failed: ${{ steps.evaluate.outputs.violation-count }} violation(s) found."
+        exit 1
+
+    - name: Fail on scan error
+      if: steps.evaluate.outputs.verdict == 'error'
+      shell: bash
+      run: |
+        echo "PHALUS scan encountered an error. Check logs above."
+        exit 2

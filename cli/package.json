@@ -9,13 +9,14 @@
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "lint": "eslint src --ext .ts",
-    "test": "node --test dist/**/*.test.js"
+    "test": "vitest run"
   },
   "dependencies": {
     "@phalus/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "tsx": "^4.7.0"
+    "tsx": "^4.7.0",
+    "vitest": "^1.6.1"
   }
 }

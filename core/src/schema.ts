@@ -1,7 +1,7 @@
 // Database schema definitions for PHALUS
 // Supports both SQLite (default) and Postgres (enterprise) via driver abstraction
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -21,6 +21,15 @@ export const CREATE_TABLES_SQL = `
     UNIQUE(ecosystem, name, version)
   );
 
+  CREATE TABLE IF NOT EXISTS policies (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    rules TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS scan_runs (
     id TEXT PRIMARY KEY,
     project_path TEXT NOT NULL,
@@ -28,6 +37,8 @@ export const CREATE_TABLES_SQL = `
     started_at TEXT,
     finished_at TEXT,
     error TEXT,
+    policy_id TEXT REFERENCES policies(id),
+    policy_verdict TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -54,3 +65,12 @@ export const CREATE_TABLES_SQL = `
   CREATE INDEX IF NOT EXISTS idx_scan_results_run ON scan_results(scan_run_id);
   CREATE INDEX IF NOT EXISTS idx_alerts_package ON alerts(package_id);
 `;
+
+/**
+ * Migrations for existing databases (schema v1 → v2).
+ * Each statement is tried individually; duplicate-column errors are swallowed.
+ */
+export const MIGRATIONS_V2 = [
+  `ALTER TABLE scan_runs ADD COLUMN policy_id TEXT REFERENCES policies(id)`,
+  `ALTER TABLE scan_runs ADD COLUMN policy_verdict TEXT`,
+];

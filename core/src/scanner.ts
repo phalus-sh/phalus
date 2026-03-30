@@ -9,6 +9,8 @@ import { scanCargo } from './connectors/cargo.js';
 import { scanGo } from './connectors/go.js';
 import { scanSboms } from './sbom.js';
 import { normalizeLicense, classifyLicense } from './license-data.js';
+import { getPolicy, evaluatePolicy } from './policy.js';
+import type { PolicyResult } from './types.js';
 
 export interface ScanResult {
   scanRunId: string;
@@ -24,14 +26,22 @@ export interface ScanResult {
     severity: string;
     message: string;
   }>;
+  policyVerdict?: 'pass' | 'fail' | null;
+  policyViolations?: PolicyResult['violations'];
   error?: string;
 }
 
 /**
  * Run a full scan of projectPath, storing results in the provided DB.
+ * Optionally evaluates a policy (by id or name) against discovered packages.
  * Updates the scan_run row throughout the process.
  */
-export async function runScan(db: Database.Database, scanRunId: string, projectPath: string): Promise<ScanResult> {
+export async function runScan(
+  db: Database.Database,
+  scanRunId: string,
+  projectPath: string,
+  policyId?: string,
+): Promise<ScanResult> {
   const updateRun = db.prepare(
     `UPDATE scan_runs SET status = ?, started_at = COALESCE(started_at, datetime('now')), error = ? WHERE id = ?`
   );
@@ -119,9 +129,45 @@ export async function runScan(db: Database.Database, scanRunId: string, projectP
     });
 
     doInserts();
+
+    // Policy evaluation
+    let policyVerdict: 'pass' | 'fail' | null = null;
+    let policyViolations: PolicyResult['violations'] = [];
+    if (policyId) {
+      const policy = getPolicy(db, policyId);
+      if (policy) {
+        const evalResult = evaluatePolicy(policy, results);
+        policyVerdict = evalResult.verdict;
+        policyViolations = evalResult.violations;
+
+        // Write policy-violation alerts to the alerts table
+        const insertViolationAlert = db.prepare(
+          `INSERT INTO alerts (id, scan_run_id, kind, severity, message) VALUES (?, ?, 'policy-violation', 'high', ?)`,
+        );
+        const writeViolations = db.transaction(() => {
+          for (const v of policyViolations) {
+            const msg = `[${policy.name}] ${v.ecosystem}:${v.packageName}@${v.packageVersion} violates rule "${v.rule}" — ${v.remediationHint}`;
+            insertViolationAlert.run(randomUUID(), scanRunId, msg);
+          }
+        });
+        writeViolations();
+
+        // Store verdict on the scan_run row
+        db.prepare(
+          `UPDATE scan_runs SET policy_id = ?, policy_verdict = ? WHERE id = ?`,
+        ).run(policy.id, policyVerdict, scanRunId);
+      }
+    }
+
     finishRun.run('done', null, scanRunId);
 
-    return { scanRunId, packages: results, alerts };
+    return {
+      scanRunId,
+      packages: results,
+      alerts,
+      policyVerdict: policyId ? policyVerdict : undefined,
+      policyViolations: policyId ? policyViolations : undefined,
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     finishRun.run('failed', message, scanRunId);

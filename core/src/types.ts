@@ -2,6 +2,40 @@
 
 export type Ecosystem = 'npm' | 'pip' | 'cargo' | 'go' | 'maven' | 'nuget' | 'unknown';
 
+export interface PolicyRules {
+  /** Explicit license allow list (SPDX IDs). Allow overrides deny. */
+  allow?: string[];
+  /** Explicit license deny list (SPDX IDs). */
+  deny?: string[];
+  /** Deny licenses by category. */
+  denyCategories?: LicenseCategory[];
+  /** Restrict scanning to these ecosystems only (informational). */
+  allowEcosystems?: Ecosystem[];
+}
+
+export interface Policy {
+  id: string;
+  name: string;
+  description: string | null;
+  rules: PolicyRules;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PolicyViolation {
+  packageName: string;
+  packageVersion: string;
+  ecosystem: string;
+  license: string | null;
+  rule: string;
+  remediationHint: string;
+}
+
+export interface PolicyResult {
+  verdict: 'pass' | 'fail';
+  violations: PolicyViolation[];
+}
+
 export type LicenseCategory =
   | 'permissive'
   | 'copyleft-weak'
