@@ -24,7 +24,8 @@ use crate::manifest::gomod::GoModParser;
 use crate::manifest::npm::NpmParser;
 use crate::manifest::pypi::PypiParser;
 use crate::pipeline::{PipelineConfig, ProgressEvent};
-use crate::ParsedManifest;
+use crate::scan::{run_scan, ScanOptions};
+use crate::{store, ParsedManifest};
 
 // ---------------------------------------------------------------------------
 // Job state tracking
@@ -56,6 +57,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/packages/{name}/csp", get(get_package_csp))
         .route("/api/packages/{name}/audit", get(get_package_audit))
         .route("/api/packages/{name}/code", get(get_package_code))
+        // Phase 1: license scanning endpoints
+        .route("/api/scans", post(create_scan).get(list_scans))
+        .route("/api/scans/{id}", get(get_scan))
+        .route("/api/licenses", get(list_licenses))
         .with_state(state)
 }
 
@@ -448,4 +453,164 @@ fn add_dir_to_zip(
         }
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1: License scanning endpoints
+// ---------------------------------------------------------------------------
+
+/// POST /api/scans — trigger a new license scan.
+/// Body: `{ "path": "/absolute/or/relative/path", "offline": false }`
+#[derive(Debug, Deserialize)]
+struct CreateScanRequest {
+    path: String,
+    #[serde(default)]
+    offline: bool,
+    #[serde(default = "default_concurrency")]
+    concurrency: usize,
+}
+
+fn default_concurrency() -> usize {
+    8
+}
+
+async fn create_scan(
+    State(_state): State<Arc<AppState>>,
+    Json(req): Json<CreateScanRequest>,
+) -> impl IntoResponse {
+    let scan_path = std::path::PathBuf::from(&req.path);
+    if !scan_path.exists() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": format!("path not found: {}", req.path)})),
+        )
+            .into_response();
+    }
+
+    let opts = ScanOptions {
+        concurrency: req.concurrency,
+        offline: req.offline,
+    };
+
+    match run_scan(&scan_path, opts).await {
+        Ok(result) => {
+            // Persist
+            match store::save(&result) {
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::warn!("Failed to persist scan result: {}", e);
+                }
+            }
+            Json(serde_json::to_value(&result).unwrap_or_default()).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+/// GET /api/scans — list all stored scan results (summary only).
+async fn list_scans(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    match store::list_all() {
+        Ok(results) => {
+            let summaries: Vec<serde_json::Value> = results
+                .iter()
+                .map(|r| {
+                    serde_json::json!({
+                        "id": r.id,
+                        "path": r.path,
+                        "scanned_at": r.scanned_at,
+                        "package_count": r.packages.len(),
+                        "manifest_files": r.manifest_files.len(),
+                        "sbom_files": r.sbom_files.len(),
+                    })
+                })
+                .collect();
+            Json(serde_json::json!({"scans": summaries})).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+/// GET /api/scans/{id} — get a specific scan result.
+async fn get_scan(
+    State(_state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    match store::load(&id) {
+        Ok(result) => Json(serde_json::to_value(&result).unwrap_or_default()).into_response(),
+        Err(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "scan not found"})),
+        )
+            .into_response(),
+    }
+}
+
+/// GET /api/licenses — list all unique licenses found across all stored scans.
+/// Query params: `?ecosystem=npm`, `?classification=permissive`
+async fn list_licenses(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    match store::list_all() {
+        Ok(results) => {
+            use std::collections::HashMap;
+            // Aggregate: license_id → { count, classification, ecosystems[] }
+            let mut agg: HashMap<String, serde_json::Value> = HashMap::new();
+
+            for scan in &results {
+                for pkg in &scan.packages {
+                    let key = pkg
+                        .spdx_license
+                        .clone()
+                        .or_else(|| pkg.raw_license.clone())
+                        .unwrap_or_else(|| "unknown".to_string());
+
+                    let entry = agg.entry(key.clone()).or_insert_with(|| {
+                        serde_json::json!({
+                            "license": key,
+                            "spdx_id": pkg.spdx_license,
+                            "classification": pkg.classification,
+                            "count": 0,
+                            "ecosystems": [],
+                        })
+                    });
+
+                    // Increment count
+                    if let Some(c) = entry["count"].as_u64() {
+                        entry["count"] = serde_json::json!(c + 1);
+                    }
+
+                    // Add ecosystem if not already present
+                    let eco = format!("{}", pkg.ecosystem);
+                    if let Some(arr) = entry["ecosystems"].as_array() {
+                        if !arr.iter().any(|e| e.as_str() == Some(&eco)) {
+                            let mut new_arr = arr.clone();
+                            new_arr.push(serde_json::json!(eco));
+                            entry["ecosystems"] = serde_json::json!(new_arr);
+                        }
+                    }
+                }
+            }
+
+            let mut licenses: Vec<serde_json::Value> = agg.into_values().collect();
+            licenses.sort_by(|a, b| {
+                b["count"]
+                    .as_u64()
+                    .unwrap_or(0)
+                    .cmp(&a["count"].as_u64().unwrap_or(0))
+            });
+
+            Json(serde_json::json!({"licenses": licenses})).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
 }

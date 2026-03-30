@@ -12,9 +12,10 @@ use phalus::audit::{AuditEvent, AuditLogger};
 use phalus::config::PhalusConfig;
 use phalus::manifest;
 use phalus::pipeline::{filter_packages, run_package, PipelineConfig};
+use phalus::scan::{format_report, run_scan, ScanOptions};
 use phalus::validator::license_check;
 use phalus::validator::similarity;
-use phalus::{Ecosystem, PackageRef, ValidationReport, Verdict};
+use phalus::{store, Ecosystem, PackageRef, ValidationReport, Verdict};
 
 #[derive(Parser)]
 #[command(
@@ -127,6 +128,23 @@ enum Commands {
         host: String,
         #[arg(long, default_value_t = 3000)]
         port: u16,
+    },
+    /// Scan a directory or manifest/SBOM file for dependency licenses
+    Scan {
+        /// Path to scan (directory, manifest file, or SBOM file)
+        path: PathBuf,
+        /// Skip registry lookups; report only what manifests/SBOMs declare
+        #[arg(long)]
+        offline: bool,
+        /// Maximum concurrent registry lookups
+        #[arg(long, default_value_t = 8)]
+        concurrency: usize,
+        /// Output format: text (default) or json
+        #[arg(long, default_value = "text")]
+        output: String,
+        /// Save the scan result to ~/.phalus/scans/
+        #[arg(long)]
+        save: bool,
     },
 }
 
@@ -603,6 +621,44 @@ fn cmd_config() -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
+// cmd_scan
+// ---------------------------------------------------------------------------
+
+async fn cmd_scan(
+    path: PathBuf,
+    offline: bool,
+    concurrency: usize,
+    output_format: &str,
+    save: bool,
+) -> Result<()> {
+    let opts = ScanOptions {
+        concurrency,
+        offline,
+    };
+
+    let result = run_scan(&path, opts).await?;
+
+    if save {
+        let saved_path = store::save(&result)?;
+        eprintln!("Scan saved: {}", saved_path.display());
+    }
+
+    match output_format {
+        "json" => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&result).unwrap_or_default()
+            );
+        }
+        _ => {
+            print!("{}", format_report(&result));
+        }
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -718,5 +774,15 @@ async fn main() -> Result<()> {
         Commands::Config => cmd_config(),
 
         Commands::Serve { host, port } => phalus::web::start_server(&host, port).await,
+
+        Commands::Scan {
+            path,
+            offline,
+            concurrency,
+            output,
+            save,
+        } => {
+            cmd_scan(path, offline, concurrency, &output, save).await
+        }
     }
 }

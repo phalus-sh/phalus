@@ -8,9 +8,13 @@ pub mod cache;
 pub mod config;
 pub mod docs;
 pub mod firewall;
+pub mod license;
 pub mod manifest;
 pub mod pipeline;
 pub mod registry;
+pub mod sbom;
+pub mod scan;
+pub mod store;
 pub mod validator;
 pub mod web;
 
@@ -170,6 +174,60 @@ pub fn resolve_license_text(license_id: &str, year: &str, holder: &str) -> Optio
         _ => return None,
     };
     Some(template.replace("{year}", year).replace("{holder}", holder))
+}
+
+// ---------------------------------------------------------------------------
+// License scanning types (Phase 1)
+// ---------------------------------------------------------------------------
+
+/// SPDX-canonical license classification bucket.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum LicenseClass {
+    Permissive,
+    CopyleftWeak,
+    CopyleftStrong,
+    Proprietary,
+    Unknown,
+}
+
+impl std::fmt::Display for LicenseClass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LicenseClass::Permissive => write!(f, "permissive"),
+            LicenseClass::CopyleftWeak => write!(f, "copyleft-weak"),
+            LicenseClass::CopyleftStrong => write!(f, "copyleft-strong"),
+            LicenseClass::Proprietary => write!(f, "proprietary"),
+            LicenseClass::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
+/// A single package discovered during a scan with its resolved license.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScannedPackage {
+    pub name: String,
+    pub version: String,
+    pub ecosystem: Ecosystem,
+    /// Raw license string as found in the manifest or registry.
+    pub raw_license: Option<String>,
+    /// Normalized SPDX identifier (e.g. "MIT", "Apache-2.0").
+    pub spdx_license: Option<String>,
+    /// High-level classification bucket.
+    pub classification: LicenseClass,
+    /// Where the license information came from ("manifest", "registry", "sbom").
+    pub source: String,
+}
+
+/// The result of a single scan run.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScanResult {
+    pub id: String,
+    pub path: String,
+    pub scanned_at: DateTime<Utc>,
+    pub packages: Vec<ScannedPackage>,
+    pub manifest_files: Vec<String>,
+    pub sbom_files: Vec<String>,
 }
 
 // ---------------------------------------------------------------------------
