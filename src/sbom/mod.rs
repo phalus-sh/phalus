@@ -26,6 +26,7 @@ struct CycloneDxBom {
 #[serde(rename_all = "camelCase")]
 struct CycloneDxComponent {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     component_type: Option<String>,
     name: String,
     version: Option<String>,
@@ -119,7 +120,9 @@ struct SpdxPackage {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SpdxExternalRef {
+    #[allow(dead_code)]
     reference_category: String,
+    #[allow(dead_code)]
     reference_type: String,
     reference_locator: String,
 }
