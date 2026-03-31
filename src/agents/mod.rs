@@ -1,4 +1,5 @@
 pub mod agent_b_executor;
+pub mod agent_b_loop;
 pub mod analyzer;
 pub mod builder;
 pub mod provider;
