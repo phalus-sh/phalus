@@ -20,6 +20,8 @@ struct PypiInfo {
     summary: Option<String>,
     license: Option<String>,
     home_page: Option<String>,
+    #[serde(default)]
+    classifiers: Vec<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -105,17 +107,102 @@ impl PypiResolver {
             .and_then(|v| v.as_str())
             .map(String::from);
 
+        // Resolve license: prefer clean SPDX-like values from the `license` field,
+        // fall back to classifiers if it's empty or contains full license text.
+        let license = resolve_pypi_license(&pkg.info);
+
         Ok(PackageMetadata {
             name: pkg.info.name,
             version: pkg.info.version,
             ecosystem: Ecosystem::PyPI,
             description: pkg.info.summary,
-            license: pkg.info.license,
+            license,
             repository_url,
             homepage_url: pkg.info.home_page,
             unpacked_size: None,
             registry_url: url,
         })
+    }
+}
+
+/// Determine the best license string from PyPI info.
+///
+/// The PyPI `license` field can be:
+/// - A clean SPDX identifier ("MIT", "Apache-2.0")
+/// - The full license text (numpy)
+/// - An informal string ("Apache-2.0 license")
+/// - Empty (mdurl)
+///
+/// When the field is empty or looks like full text (>50 chars or contains
+/// "copyright"/"redistribution"), extract from `classifiers` instead.
+fn resolve_pypi_license(info: &PypiInfo) -> Option<String> {
+    let raw = info.license.as_deref().unwrap_or("").trim();
+
+    // If license field looks like a clean identifier, use it
+    if !raw.is_empty() && raw.len() < 50 && !is_license_text(raw) {
+        // Strip trailing noise like " license"
+        let cleaned = raw
+            .trim_end_matches(" license")
+            .trim_end_matches(" License")
+            .trim();
+        return Some(cleaned.to_string());
+    }
+
+    // Fall back to classifiers
+    extract_license_from_classifiers(&info.classifiers)
+}
+
+fn is_license_text(s: &str) -> bool {
+    let lower = s.to_lowercase();
+    lower.contains("copyright")
+        || lower.contains("redistribution")
+        || lower.contains("permission is hereby granted")
+        || lower.contains("the software is provided")
+        || s.contains('\n')
+}
+
+/// Extract SPDX-like license from PyPI trove classifiers.
+/// e.g. "License :: OSI Approved :: MIT License" → "MIT"
+fn extract_license_from_classifiers(classifiers: &[String]) -> Option<String> {
+    for classifier in classifiers {
+        if !classifier.starts_with("License :: ") {
+            continue;
+        }
+        // "License :: OSI Approved :: MIT License" → "MIT License"
+        let parts: Vec<&str> = classifier.split(" :: ").collect();
+        if let Some(last) = parts.last() {
+            let mapped = map_classifier_to_spdx(last.trim());
+            if !mapped.is_empty() {
+                return Some(mapped.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn map_classifier_to_spdx(classifier: &str) -> &str {
+    match classifier {
+        "MIT License" => "MIT",
+        "BSD License" => "BSD-3-Clause",
+        "Apache Software License" => "Apache-2.0",
+        "GNU General Public License v2 (GPLv2)" => "GPL-2.0-only",
+        "GNU General Public License v2 or later (GPLv2+)" => "GPL-2.0-or-later",
+        "GNU General Public License v3 (GPLv3)" => "GPL-3.0-only",
+        "GNU General Public License v3 or later (GPLv3+)" => "GPL-3.0-or-later",
+        "GNU Lesser General Public License v2 (LGPLv2)" => "LGPL-2.0-only",
+        "GNU Lesser General Public License v2 or later (LGPLv2+)" => "LGPL-2.0-or-later",
+        "GNU Lesser General Public License v3 (LGPLv3)" => "LGPL-3.0-only",
+        "GNU Lesser General Public License v3 or later (LGPLv3+)" => "LGPL-3.0-or-later",
+        "ISC License (ISCL)" => "ISC",
+        "Mozilla Public License 2.0 (MPL 2.0)" => "MPL-2.0",
+        "European Union Public Licence 1.2 (EUPL 1.2)" => "EUPL-1.2",
+        "The Unlicense (Unlicense)" => "Unlicense",
+        "CC0 1.0 Universal (CC0 1.0) Public Domain Dedication" => "CC0-1.0",
+        "Public Domain" => "Unlicense",
+        _ => {
+            // Try stripping " License" suffix
+            classifier.strip_suffix(" License").unwrap_or(classifier)
+        }
     }
 }
 
