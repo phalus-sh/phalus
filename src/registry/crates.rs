@@ -100,7 +100,7 @@ impl CratesResolver {
         let response = self
             .client
             .get(&url)
-            .header("User-Agent", "phalus/0.5.0")
+            .header("User-Agent", "phalus/0.6.0")
             .send()
             .await?;
 
@@ -146,7 +146,7 @@ impl CratesResolver {
         let response = self
             .client
             .get(&url)
-            .header("User-Agent", "phalus/0.5.0")
+            .header("User-Agent", "phalus/0.6.0")
             .send()
             .await?;
 
