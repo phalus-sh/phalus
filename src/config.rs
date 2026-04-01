@@ -26,7 +26,7 @@ impl Default for RetryConfig {
         Self {
             max_retries: 3,
             initial_backoff_ms: 500,
-            timeout_secs: 120,
+            timeout_secs: 600,
         }
     }
 }
@@ -38,10 +38,12 @@ pub struct LlmConfig {
     pub agent_a_model: String,
     pub agent_a_api_key: String,
     pub agent_a_base_url: String,
+    pub agent_a_max_tokens: u32,
     pub agent_b_provider: String,
     pub agent_b_model: String,
     pub agent_b_api_key: String,
     pub agent_b_base_url: String,
+    pub agent_b_max_tokens: u32,
     pub retry: RetryConfig,
 }
 
@@ -52,10 +54,12 @@ impl Default for LlmConfig {
             agent_a_model: "claude-sonnet-4-6".to_string(),
             agent_a_api_key: String::new(),
             agent_a_base_url: String::new(),
+            agent_a_max_tokens: 16384,
             agent_b_provider: "anthropic".to_string(),
             agent_b_model: "claude-sonnet-4-6".to_string(),
             agent_b_api_key: String::new(),
             agent_b_base_url: String::new(),
+            agent_b_max_tokens: 65536,
             retry: RetryConfig::default(),
         }
     }
@@ -75,6 +79,7 @@ impl std::fmt::Debug for LlmConfig {
                 },
             )
             .field("agent_a_base_url", &self.agent_a_base_url)
+            .field("agent_a_max_tokens", &self.agent_a_max_tokens)
             .field("agent_b_provider", &self.agent_b_provider)
             .field("agent_b_model", &self.agent_b_model)
             .field(
@@ -86,6 +91,7 @@ impl std::fmt::Debug for LlmConfig {
                 },
             )
             .field("agent_b_base_url", &self.agent_b_base_url)
+            .field("agent_b_max_tokens", &self.agent_b_max_tokens)
             .field("retry", &self.retry)
             .finish()
     }
@@ -313,10 +319,20 @@ fn apply_llm_override(cfg: &mut LlmConfig, field: &str, value: &str) {
         "agent_a_model" => cfg.agent_a_model = value.to_string(),
         "agent_a_api_key" => cfg.agent_a_api_key = value.to_string(),
         "agent_a_base_url" => cfg.agent_a_base_url = value.to_string(),
+        "agent_a_max_tokens" => {
+            if let Ok(v) = value.parse() {
+                cfg.agent_a_max_tokens = v;
+            }
+        }
         "agent_b_provider" => cfg.agent_b_provider = value.to_string(),
         "agent_b_model" => cfg.agent_b_model = value.to_string(),
         "agent_b_api_key" => cfg.agent_b_api_key = value.to_string(),
         "agent_b_base_url" => cfg.agent_b_base_url = value.to_string(),
+        "agent_b_max_tokens" => {
+            if let Ok(v) = value.parse() {
+                cfg.agent_b_max_tokens = v;
+            }
+        }
         "retry_max_retries" => {
             if let Ok(v) = value.parse() {
                 cfg.retry.max_retries = v;

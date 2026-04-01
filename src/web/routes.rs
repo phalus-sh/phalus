@@ -105,7 +105,9 @@ async fn parse_manifest(State(_state): State<Arc<AppState>>, body: String) -> im
 }
 
 async fn health() -> Json<serde_json::Value> {
-    Json(serde_json::json!({"status": "ok"}))
+    let output_dir = std::fs::canonicalize("./phalus-output")
+        .unwrap_or_else(|_| PathBuf::from("./phalus-output"));
+    Json(serde_json::json!({"status": "ok", "output_dir": output_dir.to_string_lossy()}))
 }
 
 // ---------------------------------------------------------------------------
@@ -117,12 +119,43 @@ struct CreateJobRequest {
     manifest_content: String,
     license: Option<String>,
     isolation: Option<String>,
+    #[serde(default)]
+    resume: bool,
 }
 
 async fn create_job(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateJobRequest>,
 ) -> impl IntoResponse {
+    // Reject early if no LLM API keys are configured
+    let app_config = PhalusConfig::with_env_overrides(PhalusConfig::load().unwrap_or_default());
+    let missing_a = app_config.llm.agent_a_api_key.is_empty();
+    let missing_b = app_config.llm.agent_b_api_key.is_empty();
+    if missing_a || missing_b {
+        let missing: Vec<&str> = [
+            if missing_a {
+                Some("PHALUS_LLM__AGENT_A_API_KEY")
+            } else {
+                None
+            },
+            if missing_b {
+                Some("PHALUS_LLM__AGENT_B_API_KEY")
+            } else {
+                None
+            },
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": format!("Missing LLM API key(s): {}. Set env vars or configure in ~/.phalus/config.toml", missing.join(", "))
+            })),
+        )
+            .into_response();
+    }
+
     let job_id = uuid::Uuid::new_v4().to_string();
 
     // Parse the manifest
@@ -153,6 +186,7 @@ async fn create_job(
     let job_id_clone = job_id.clone();
     let license = req.license.unwrap_or_else(|| "mit".to_string());
     let isolation = req.isolation.unwrap_or_else(|| "context".to_string());
+    let resume = req.resume;
 
     // Spawn background task to process packages via the real pipeline
     let state_jobs = Arc::clone(&state) as Arc<AppState>;
@@ -177,6 +211,7 @@ async fn create_job(
             similarity_threshold: 0.70,
             concurrency: 3,
             dry_run: false,
+            resume,
         };
 
         std::fs::create_dir_all(&pipeline_config.output_dir).ok();
