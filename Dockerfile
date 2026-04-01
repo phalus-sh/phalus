@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
     libssl-dev \
-    protobuf-compiler \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
