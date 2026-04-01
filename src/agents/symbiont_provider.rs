@@ -101,7 +101,17 @@ impl InferenceProvider for PhalusInferenceProvider {
         drop(provider);
 
         // Parse tool calls from the response.
-        let tool_calls = parse_tool_calls(&response_text);
+        let mut tool_calls = parse_tool_calls(&response_text);
+
+        // If the LLM produced ===FILE: delimiters but no explicit tool calls,
+        // treat the file content as an implicit write_files call.
+        if tool_calls.is_empty() && response_text.contains("===FILE:") {
+            tool_calls.push(ToolCallRequest {
+                id: uuid::Uuid::new_v4().to_string(),
+                name: "write_files".into(),
+                arguments: response_text.clone(),
+            });
+        }
 
         // Strip tool_call blocks from the content that the caller sees.
         let content = strip_tool_call_blocks(&response_text);
