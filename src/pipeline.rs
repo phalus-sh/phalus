@@ -42,6 +42,7 @@ pub struct PipelineConfig {
     pub similarity_threshold: f64,
     pub concurrency: usize,
     pub dry_run: bool,
+    pub resume: bool,
 }
 
 impl Default for PipelineConfig {
@@ -54,6 +55,7 @@ impl Default for PipelineConfig {
             similarity_threshold: 0.70,
             concurrency: 3,
             dry_run: false,
+            resume: false,
         }
     }
 }
@@ -77,10 +79,28 @@ pub struct PackageResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProgressEvent {
-    PackageStarted { name: String },
-    PhaseDone { name: String, phase: String },
-    PackageDone { name: String, success: bool },
-    JobDone { total: usize, failed: usize },
+    PackageStarted {
+        name: String,
+    },
+    PhaseDone {
+        name: String,
+        phase: String,
+    },
+    PackageDone {
+        name: String,
+        success: bool,
+        error: Option<String>,
+    },
+    JobDone {
+        total: usize,
+        failed: usize,
+    },
+    AgentIteration {
+        name: String,
+        iteration: u32,
+        max_iterations: u32,
+        detail: String,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -228,6 +248,39 @@ pub async fn run_package(
     let name = pkg.name.clone();
     let version = pkg.version_constraint.clone();
 
+    // Resume: skip if output directory has implementation files (not just .cleanroom)
+    if config.resume {
+        let pkg_output = config.output_dir.join(&name);
+        let has_impl_files = pkg_output.is_dir()
+            && std::fs::read_dir(&pkg_output).is_ok_and(|entries| {
+                entries
+                    .filter_map(|e| e.ok())
+                    .any(|e| e.file_name().to_str().is_some_and(|n| !n.starts_with('.')))
+            });
+        if has_impl_files {
+            tracing::info!("[{}] Skipping (already completed, --resume)", name);
+            emit_progress(
+                &progress_tx,
+                ProgressEvent::PackageStarted { name: name.clone() },
+            );
+            emit_progress(
+                &progress_tx,
+                ProgressEvent::PackageDone {
+                    name: name.clone(),
+                    success: true,
+                    error: None,
+                },
+            );
+            return PackageResult {
+                name,
+                version,
+                success: true,
+                error: None,
+                validation: None,
+            };
+        }
+    }
+
     tracing::info!("[{}] Starting pipeline...", name);
 
     emit_progress(
@@ -239,11 +292,20 @@ pub async fn run_package(
     let metadata = match resolve_metadata(pkg).await {
         Ok(m) => m,
         Err(e) => {
+            let err_msg = format!("registry resolve failed: {}", e);
+            emit_progress(
+                &progress_tx,
+                ProgressEvent::PackageDone {
+                    name: name.clone(),
+                    success: false,
+                    error: Some(err_msg.clone()),
+                },
+            );
             return PackageResult {
                 name,
                 version,
                 success: false,
-                error: Some(format!("registry resolve failed: {}", e)),
+                error: Some(err_msg),
                 validation: None,
             };
         }
@@ -288,11 +350,20 @@ pub async fn run_package(
             d
         }
         Err(e) => {
+            let err_msg = format!("doc fetch failed: {}", e);
+            emit_progress(
+                &progress_tx,
+                ProgressEvent::PackageDone {
+                    name: name.clone(),
+                    success: false,
+                    error: Some(err_msg.clone()),
+                },
+            );
             return PackageResult {
                 name,
                 version,
                 success: false,
-                error: Some(format!("doc fetch failed: {}", e)),
+                error: Some(err_msg),
                 validation: None,
             };
         }
@@ -333,11 +404,20 @@ pub async fn run_package(
                     spec
                 }
                 Err(e) => {
+                    let err_msg = format!("Agent A failed: {}", e);
+                    emit_progress(
+                        &progress_tx,
+                        ProgressEvent::PackageDone {
+                            name: name.clone(),
+                            success: false,
+                            error: Some(err_msg.clone()),
+                        },
+                    );
                     return PackageResult {
                         name,
                         version,
                         success: false,
-                        error: Some(format!("Agent A failed: {}", e)),
+                        error: Some(err_msg),
                         validation: None,
                     };
                 }
@@ -396,28 +476,62 @@ pub async fn run_package(
     let target_lang = resolve_target_lang(&config.target_lang);
 
     tracing::info!("[{}] Running Agent B (builder)...", name);
+    emit_progress(
+        &progress_tx,
+        ProgressEvent::PhaseDone {
+            name: name.clone(),
+            phase: "agent_b_started".to_string(),
+        },
+    );
 
-    let implementation =
-        match run_agent_b(&csp, &config.license, &target_lang, app_config, &audit).await {
-            Ok(imp) => imp,
-            Err(e) => {
-                return PackageResult {
-                    name,
-                    version: metadata.version,
+    let implementation = match crate::agents::agent_b_loop::run_agent_b_loop(
+        &csp,
+        &config.license,
+        &target_lang,
+        app_config,
+        &config.output_dir,
+        progress_tx.clone(),
+    )
+    .await
+    {
+        Ok(imp) => imp,
+        Err(e) => {
+            let err_msg = format!("Agent B failed: {}", e);
+            emit_progress(
+                &progress_tx,
+                ProgressEvent::PackageDone {
+                    name: name.clone(),
                     success: false,
-                    error: Some(format!("Agent B failed: {}", e)),
-                    validation: None,
-                };
-            }
-        };
+                    error: Some(err_msg.clone()),
+                },
+            );
+            return PackageResult {
+                name,
+                version: metadata.version,
+                success: false,
+                error: Some(err_msg),
+                validation: None,
+            };
+        }
+    };
 
-    // 6. Write output to disk
+    // 6. Write output to disk (files already written by agent loop, but write_implementation_to_disk
+    // also handles validation artifacts — keep it for any files the loop didn't cover)
     if let Err(e) = write_implementation_to_disk(&implementation, &config.output_dir) {
+        let err_msg = format!("write output failed: {}", e);
+        emit_progress(
+            &progress_tx,
+            ProgressEvent::PackageDone {
+                name: name.clone(),
+                success: false,
+                error: Some(err_msg.clone()),
+            },
+        );
         return PackageResult {
             name,
             version: metadata.version,
             success: false,
-            error: Some(format!("write output failed: {}", e)),
+            error: Some(err_msg),
             validation: None,
         };
     }
@@ -576,6 +690,7 @@ pub async fn run_package(
         ProgressEvent::PackageDone {
             name: name.clone(),
             success,
+            error: None,
         },
     );
 
@@ -721,7 +836,9 @@ pub async fn run_agent_a(
     let user_prompt = analyzer::build_analyzer_prompt(docs);
     let prompt_hash = format!("{:x}", Sha256::digest(user_prompt.as_bytes()));
 
-    let response = provider.complete(system, &user_prompt, 8192).await?;
+    let response = provider
+        .complete(system, &user_prompt, config.llm.agent_a_max_tokens)
+        .await?;
     let csp = analyzer::parse_csp_response(&response, &metadata.name, &metadata.version)?;
 
     let doc_hashes: HashMap<String, String> = csp
@@ -777,7 +894,9 @@ pub async fn run_agent_b(
     let user_prompt = builder::build_builder_prompt(csp, license, target_lang);
     let prompt_hash = format!("{:x}", Sha256::digest(user_prompt.as_bytes()));
 
-    let response = provider.complete(system, &user_prompt, 16384).await?;
+    let response = provider
+        .complete(system, &user_prompt, config.llm.agent_b_max_tokens)
+        .await?;
     let lang_str = target_lang.to_string();
     let implementation =
         builder::parse_implementation_response(&response, &csp.package_name, &lang_str)?;

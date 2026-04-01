@@ -62,6 +62,9 @@ enum Commands {
         concurrency: usize,
         #[arg(long)]
         dry_run: bool,
+        /// Skip packages whose output directory already exists
+        #[arg(long)]
+        resume: bool,
         #[arg(long)]
         verbose: bool,
     },
@@ -689,6 +692,7 @@ async fn main() -> Result<()> {
             similarity_threshold,
             concurrency,
             dry_run,
+            resume,
             verbose,
         } => {
             if verbose {
@@ -703,6 +707,7 @@ async fn main() -> Result<()> {
                 similarity_threshold,
                 concurrency,
                 dry_run,
+                resume,
             };
             cmd_run(manifest, config, only, exclude).await
         }
@@ -729,6 +734,7 @@ async fn main() -> Result<()> {
                 similarity_threshold,
                 concurrency: 1,
                 dry_run: false,
+                resume: false,
             };
             cmd_run_one(package, config).await
         }
@@ -755,6 +761,7 @@ async fn main() -> Result<()> {
                 similarity_threshold,
                 concurrency: 1,
                 dry_run: false,
+                resume: false,
             };
             cmd_build(csp, config).await
         }

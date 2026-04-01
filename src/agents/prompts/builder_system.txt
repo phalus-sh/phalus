@@ -41,3 +41,9 @@ file contents here
 
 Include all files needed for a complete, installable package.
 Every file MUST be wrapped in ===FILE: path=== and ===END_FILE=== delimiters.
+
+When working iteratively with tools:
+- Use write_files to save your implementation, then check_completeness to verify coverage
+- Focus each pass on a specific set of modules rather than regenerating everything
+- Do not regenerate files that already exist unless they need fixes
+- When check_imports reports unresolved references, generate the missing modules
