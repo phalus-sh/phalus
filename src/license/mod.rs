@@ -138,7 +138,43 @@ pub fn normalize(raw: &str) -> String {
 }
 
 /// Classify a normalized SPDX license identifier into a high-level bucket.
+///
+/// Handles compound expressions: "MIT OR Apache-2.0", "MIT/Apache-2.0",
+/// "MIT AND BSD-3-Clause". For OR (choice), uses the most permissive.
+/// For AND (both apply), uses the most restrictive.
 pub fn classify(spdx_id: &str) -> LicenseClass {
+    // Handle compound expressions
+    let has_or = spdx_id.contains(" OR ") || spdx_id.contains('/');
+    let has_and = spdx_id.contains(" AND ");
+    if has_or || has_and {
+        let parts: Vec<&str> = if has_or {
+            spdx_id.split(" OR ").flat_map(|s| s.split('/')).collect()
+        } else {
+            spdx_id.split(" AND ").collect()
+        };
+
+        let classes: Vec<LicenseClass> = parts
+            .iter()
+            .map(|p| classify(normalize(p.trim()).as_str()))
+            .collect();
+
+        if classes.is_empty() {
+            return LicenseClass::Unknown;
+        }
+
+        if has_or {
+            // OR = user chooses → most permissive (least restrictive)
+            return most_permissive(&classes);
+        } else {
+            // AND = both apply → most restrictive
+            return most_restrictive(&classes);
+        }
+    }
+
+    classify_single(spdx_id)
+}
+
+fn classify_single(spdx_id: &str) -> LicenseClass {
     match spdx_id {
         // ---------- Permissive ----------
         "MIT" | "MIT-0" | "X11" | "Apache-2.0" | "Apache-1.1" | "Apache-1.0" | "BSD-2-Clause"
@@ -160,6 +196,34 @@ pub fn classify(spdx_id: &str) -> LicenseClass {
 
         _ => LicenseClass::Unknown,
     }
+}
+
+fn class_rank(c: &LicenseClass) -> u8 {
+    match c {
+        LicenseClass::Permissive => 0,
+        LicenseClass::CopyleftWeak => 1,
+        LicenseClass::CopyleftStrong => 2,
+        LicenseClass::Proprietary => 3,
+        LicenseClass::Unknown => 4,
+    }
+}
+
+fn most_permissive(classes: &[LicenseClass]) -> LicenseClass {
+    classes
+        .iter()
+        .filter(|c| **c != LicenseClass::Unknown)
+        .min_by_key(|c| class_rank(c))
+        .cloned()
+        .unwrap_or(LicenseClass::Unknown)
+}
+
+fn most_restrictive(classes: &[LicenseClass]) -> LicenseClass {
+    classes
+        .iter()
+        .filter(|c| **c != LicenseClass::Unknown)
+        .max_by_key(|c| class_rank(c))
+        .cloned()
+        .unwrap_or(LicenseClass::Unknown)
 }
 
 /// Convenience: normalize then classify a raw license string.
@@ -257,6 +321,24 @@ mod tests {
     #[test]
     fn classify_unknown() {
         assert_eq!(classify("MyCustomLicense-1.0"), LicenseClass::Unknown);
+    }
+
+    #[test]
+    fn classify_compound_or() {
+        // OR = choice → most permissive
+        assert_eq!(classify("MIT OR Apache-2.0"), LicenseClass::Permissive);
+        assert_eq!(classify("MIT/Apache-2.0"), LicenseClass::Permissive);
+        assert_eq!(classify("GPL-3.0-only OR MIT"), LicenseClass::Permissive);
+    }
+
+    #[test]
+    fn classify_compound_and() {
+        // AND = both apply → most restrictive
+        assert_eq!(classify("Apache-2.0 AND ISC"), LicenseClass::Permissive);
+        assert_eq!(
+            classify("MIT AND GPL-3.0-only"),
+            LicenseClass::CopyleftStrong
+        );
     }
 
     #[test]
