@@ -58,7 +58,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/packages/{name}/audit", get(get_package_audit))
         .route("/api/packages/{name}/code", get(get_package_code))
         // Phase 1: license scanning endpoints
-        .route("/api/scans", post(create_scan).get(list_scans))
+        .route(
+            "/api/scans",
+            post(create_scan).get(list_scans).delete(delete_all_scans),
+        )
         .route("/api/scans/{id}", get(get_scan))
         .route("/api/licenses", get(list_licenses))
         .with_state(state)
@@ -583,6 +586,18 @@ async fn get_scan(
         Err(_) => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({"error": "scan not found"})),
+        )
+            .into_response(),
+    }
+}
+
+/// DELETE /api/scans — delete all stored scan results.
+async fn delete_all_scans(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    match store::delete_all() {
+        Ok(count) => Json(serde_json::json!({"deleted": count})).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e.to_string()})),
         )
             .into_response(),
     }

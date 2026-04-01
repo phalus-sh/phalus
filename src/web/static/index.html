@@ -781,7 +781,10 @@
 
     <!-- Scan history -->
     <div class="card" style="margin-top:16px;" id="scan-history-card">
-      <div class="card-label">// Scan History</div>
+      <div class="card-label" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>// Scan History</span>
+        <button class="btn" id="clear-history-btn" style="font-size:11px;padding:2px 8px;" onclick="clearScanHistory()">Clear</button>
+      </div>
       <p class="results-placeholder" id="scan-history-empty">No saved scans yet.</p>
       <div id="scan-history-table"></div>
     </div>
@@ -1302,6 +1305,17 @@ function renderScanTable() {
       renderScanTable();
     });
   }
+}
+
+function clearScanHistory() {
+  if (!confirm('Delete all scan history?')) return;
+  fetch('/api/scans', { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(data) {
+    document.getElementById('scan-history-empty').style.display = '';
+    document.getElementById('scan-history-table').innerHTML = '';
+    document.getElementById('scan-summary').style.display = 'none';
+    document.getElementById('scan-results-empty').style.display = '';
+    document.getElementById('scan-results-table').innerHTML = '';
+  }).catch(function() {});
 }
 
 // -- Scan history ---

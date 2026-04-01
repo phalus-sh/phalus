@@ -88,6 +88,23 @@ pub fn delete(id: &str) -> Result<bool> {
     }
 }
 
+/// Delete all stored scans. Returns the number deleted.
+pub fn delete_all() -> Result<usize> {
+    let dir = scans_dir()?;
+    if !dir.exists() {
+        return Ok(0);
+    }
+    let mut count = 0;
+    for entry in std::fs::read_dir(&dir)? {
+        let entry = entry?;
+        if entry.path().extension().is_some_and(|e| e == "json") {
+            std::fs::remove_file(entry.path())?;
+            count += 1;
+        }
+    }
+    Ok(count)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
