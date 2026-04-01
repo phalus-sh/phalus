@@ -45,10 +45,25 @@ impl ActionExecutor for AgentBExecutor {
             {
                 let obs = match name.as_str() {
                     "write_files" => match write_files_to_dir(&self.output_dir, arguments) {
-                        Ok(files) => Observation::tool_result(
-                            "write_files",
-                            format!("Wrote {} file(s): {}", files.len(), files.join(", ")),
-                        ),
+                        Ok(files) => {
+                            let write_obs = Observation::tool_result(
+                                "write_files",
+                                format!("Wrote {} file(s): {}", files.len(), files.join(", ")),
+                            )
+                            .with_call_id(call_id.clone());
+                            observations.push(write_obs);
+
+                            // Auto-run check_completeness and check_imports after writing
+                            let completeness =
+                                check_completeness_impl(&self.output_dir, &self.api_surface_json);
+                            observations.push(Observation::tool_result(
+                                "check_completeness",
+                                &completeness,
+                            ));
+                            let imports = check_imports_impl(&self.output_dir);
+                            observations.push(Observation::tool_result("check_imports", &imports));
+                            continue;
+                        }
                         Err(e) => Observation::tool_error("write_files", e),
                     },
                     "check_completeness" => {
