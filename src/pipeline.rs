@@ -95,6 +95,12 @@ pub enum ProgressEvent {
         total: usize,
         failed: usize,
     },
+    AgentIteration {
+        name: String,
+        iteration: u32,
+        max_iterations: u32,
+        detail: String,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -484,6 +490,7 @@ pub async fn run_package(
         &target_lang,
         app_config,
         &config.output_dir,
+        progress_tx.clone(),
     )
     .await
     {

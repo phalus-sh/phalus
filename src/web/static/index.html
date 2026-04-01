@@ -27,7 +27,7 @@
       background: var(--bg);
       color: var(--text);
       font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace;
-      font-size: 13px;
+      font-size: 15px;
       line-height: 1.6;
       min-height: 100vh;
       padding-bottom: 40px;
@@ -49,7 +49,7 @@
 
     .logo {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 15px;
+      font-size: 17px;
       font-weight: 800;
       letter-spacing: 4px;
       color: var(--accent);
@@ -69,7 +69,7 @@
       border-bottom: 2px solid transparent;
       padding: 0 16px;
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 500;
       letter-spacing: 1px;
       text-transform: uppercase;
@@ -92,7 +92,7 @@
     }
 
     .version-label {
-      font-size: 10px;
+      font-size: 12px;
       color: var(--muted);
       letter-spacing: 1px;
     }
@@ -142,7 +142,7 @@
     }
 
     .card-label {
-      font-size: 9px;
+      font-size: 11px;
       letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--accent);
@@ -154,7 +154,7 @@
     /* -- Form elements ------------------------------------------ */
     label {
       display: block;
-      font-size: 10px;
+      font-size: 12px;
       color: var(--muted);
       margin-bottom: 4px;
     }
@@ -165,7 +165,7 @@
       border: 1px solid var(--border);
       color: var(--text);
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 12px;
+      font-size: 14px;
       padding: 7px 10px;
       outline: none;
       transition: border-color 0.15s;
@@ -178,7 +178,7 @@
     textarea {
       resize: vertical;
       min-height: 120px;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     select { cursor: pointer; }
@@ -190,7 +190,7 @@
       display: flex;
       align-items: center;
       gap: 16px;
-      font-size: 11px;
+      font-size: 13px;
       color: var(--muted);
     }
 
@@ -230,7 +230,7 @@
       text-align: center;
       cursor: pointer;
       color: var(--muted);
-      font-size: 11px;
+      font-size: 13px;
       transition: border-color 0.15s;
       margin-bottom: 8px;
     }
@@ -245,7 +245,7 @@
     .dropzone .hint {
       display: block;
       margin-top: 4px;
-      font-size: 9px;
+      font-size: 11px;
       color: var(--dim);
     }
 
@@ -258,7 +258,7 @@
       border: 1px solid var(--border);
       background: none;
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 600;
       letter-spacing: 1px;
       text-transform: uppercase;
@@ -304,7 +304,7 @@
       list-style: none;
       max-height: 200px;
       overflow-y: auto;
-      font-size: 11px;
+      font-size: 13px;
       scrollbar-width: thin;
       scrollbar-color: var(--border) var(--bg);
     }
@@ -321,12 +321,12 @@
 
     .progress-empty {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 13px;
       font-style: italic;
     }
 
     .progress-counter {
-      font-size: 11px;
+      font-size: 13px;
       color: var(--cyan);
       margin-bottom: 8px;
       font-weight: 600;
@@ -335,7 +335,7 @@
     /* -- Results ------------------------------------------------ */
     .results-placeholder {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 13px;
       font-style: italic;
     }
 
@@ -352,20 +352,20 @@
     .result-card .pkg-info { display: flex; flex-direction: column; gap: 1px; }
 
     .result-card .pkg-name {
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 600;
     }
 
     .result-card .pkg-name .ver { color: var(--muted); font-weight: 400; }
 
     .result-card .pkg-meta {
-      font-size: 9px;
+      font-size: 11px;
       color: var(--muted);
     }
 
     .pkg-badge {
       font-weight: 700;
-      font-size: 9px;
+      font-size: 11px;
       padding: 2px 8px;
       letter-spacing: 1px;
       text-transform: uppercase;
@@ -391,7 +391,7 @@
     }
 
     .download-banner .summary-text {
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 600;
       margin-bottom: 10px;
     }
@@ -399,6 +399,39 @@
     .download-banner .btn {
       text-decoration: none;
       display: inline-flex;
+    }
+
+    .output-path-row {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .output-path-row code {
+      color: var(--cyan);
+      background: var(--surface);
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+    }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .copy-btn:hover {
+      color: var(--text);
+      border-color: var(--muted);
     }
 
     /* -- Parsed packages ---------------------------------------- */
@@ -413,7 +446,7 @@
       gap: 8px;
       padding: 3px 0;
       border-bottom: 1px solid var(--bg);
-      font-size: 11px;
+      font-size: 13px;
     }
 
     .parsed-packages li:last-child { border-bottom: none; }
@@ -421,7 +454,7 @@
     .eco-badge {
       background: rgba(255, 62, 62, 0.1);
       color: var(--accent2);
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 600;
       padding: 1px 5px;
       text-transform: uppercase;
@@ -430,14 +463,14 @@
 
     /* -- Scan view ---------------------------------------------- */
     .scan-summary-number {
-      font-size: 28px;
+      font-size: 30px;
       font-weight: 700;
       color: var(--text);
       margin-bottom: 2px;
     }
 
     .scan-summary-label {
-      font-size: 9px;
+      font-size: 11px;
       color: var(--muted);
       letter-spacing: 2px;
       text-transform: uppercase;
@@ -447,7 +480,7 @@
     .scan-stat-row {
       display: flex;
       justify-content: space-between;
-      font-size: 11px;
+      font-size: 13px;
       padding: 4px 0;
     }
 
@@ -464,13 +497,13 @@
     .scan-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     .scan-table th {
       text-align: left;
       padding: 6px 0;
-      font-size: 9px;
+      font-size: 11px;
       letter-spacing: 1px;
       text-transform: uppercase;
       color: var(--muted);
@@ -487,16 +520,16 @@
 
     .scan-table .license-cell { color: var(--text); }
 
-    .class-permissive     { color: var(--green); font-weight: 600; font-size: 10px; }
-    .class-copyleft-weak  { color: var(--yellow); font-weight: 600; font-size: 10px; }
-    .class-copyleft-strong { color: var(--accent); font-weight: 600; font-size: 10px; }
-    .class-proprietary    { color: var(--accent); font-weight: 600; font-size: 10px; }
-    .class-unknown        { color: var(--muted); font-weight: 600; font-size: 10px; }
+    .class-permissive     { color: var(--green); font-weight: 600; font-size: 12px; }
+    .class-copyleft-weak  { color: var(--yellow); font-weight: 600; font-size: 12px; }
+    .class-copyleft-strong { color: var(--accent); font-weight: 600; font-size: 12px; }
+    .class-proprietary    { color: var(--accent); font-weight: 600; font-size: 12px; }
+    .class-unknown        { color: var(--muted); font-weight: 600; font-size: 12px; }
 
     .scan-more {
       text-align: center;
       color: var(--muted);
-      font-size: 10px;
+      font-size: 12px;
       padding: 8px 0;
       cursor: pointer;
     }
@@ -507,13 +540,13 @@
     .history-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     .history-table th {
       text-align: left;
       padding: 6px 0;
-      font-size: 9px;
+      font-size: 11px;
       letter-spacing: 1px;
       text-transform: uppercase;
       color: var(--muted);
@@ -532,7 +565,7 @@
     .view-link {
       color: var(--accent);
       cursor: pointer;
-      font-size: 10px;
+      font-size: 12px;
     }
 
     .view-link:hover { color: var(--accent2); }
@@ -542,7 +575,7 @@
       background: var(--bg);
       border-top: 1px solid var(--border);
       padding: 6px 24px;
-      font-size: 10px;
+      font-size: 12px;
       color: var(--muted);
       position: fixed;
       bottom: 0;
@@ -584,8 +617,8 @@
     @media (max-width: 700px) {
       header { padding: 0 12px; }
       main { padding: 0 12px; margin: 16px auto; }
-      .logo { font-size: 12px; letter-spacing: 2px; margin-right: 12px; }
-      .tab-btn { padding: 0 10px; font-size: 10px; }
+      .logo { font-size: 14px; letter-spacing: 2px; margin-right: 12px; }
+      .tab-btn { padding: 0 10px; font-size: 12px; }
     }
   </style>
 </head>
@@ -630,7 +663,7 @@
         </div>
 
         <button class="btn btn-full" id="parse-btn">Parse</button>
-        <div id="parse-result" style="margin-top:8px;font-size:11px;color:var(--muted);"></div>
+        <div id="parse-result" style="margin-top:8px;font-size:13px;color:var(--muted);"></div>
       </div>
 
       <!-- Options -->
@@ -664,6 +697,10 @@
             <option value="python">Python</option>
             <option value="typescript">TypeScript</option>
           </select>
+        </div>
+
+        <div class="checkbox-row" style="margin-bottom:12px;">
+          <label><input type="checkbox" id="resume-check" /> Resume (skip completed packages)</label>
         </div>
 
         <div class="btn-row">
@@ -713,12 +750,12 @@
             <div>
               <label for="scan-concurrency" style="display:inline;margin-bottom:0;">Concurrency</label>
               <input id="scan-concurrency" type="number" value="8" min="1" max="32"
-                     style="width:50px;display:inline;padding:4px 6px;font-size:11px;margin-left:4px;" />
+                     style="width:50px;display:inline;padding:4px 6px;font-size:13px;margin-left:4px;" />
             </div>
           </div>
 
           <button class="btn btn-accent btn-full" id="scan-btn">Scan</button>
-          <div id="scan-error" style="margin-top:8px;font-size:11px;color:var(--accent);display:none;"></div>
+          <div id="scan-error" style="margin-top:8px;font-size:13px;color:var(--accent);display:none;"></div>
         </div>
 
         <!-- Summary -->
@@ -806,14 +843,18 @@ function timeAgo(dateStr) {
 // =================================================================
 // HEALTH CHECK
 // =================================================================
+var outputDir = './phalus-output';
 (function checkHealth() {
   fetch('/api/health').then(function(r) {
     if (r.ok) {
       document.getElementById('health-dot').className = 'health-dot ok';
       document.getElementById('health-dot').title = 'API ok';
+      return r.json();
     } else {
       throw new Error('non-ok');
     }
+  }).then(function(data) {
+    if (data && data.output_dir) outputDir = data.output_dir;
   }).catch(function() {
     document.getElementById('health-dot').className = 'health-dot error';
     document.getElementById('health-dot').title = 'API unreachable';
@@ -938,7 +979,7 @@ function clearResults() {
   document.getElementById('results-card').className = 'card';
 }
 
-function addResultCard(pkg, version, pass, elapsed) {
+function addResultCard(pkg, version, pass, elapsed, error) {
   document.getElementById('results-empty').style.display = 'none';
   document.getElementById('results-card').className = 'card span-2';
 
@@ -947,11 +988,13 @@ function addResultCard(pkg, version, pass, elapsed) {
   var badgeClass = pass ? 'pass' : 'fail';
   var badgeText = pass ? 'PASS' : 'FAIL';
   var elapsedText = elapsed ? ' — ' + elapsed + 's' : '';
+  var errorHtml = error ? '<span class="pkg-meta" style="color:var(--accent)">' + escapeHtml(error) + '</span>' : '';
 
   card.innerHTML =
     '<div class="pkg-info">' +
       '<span class="pkg-name">' + escapeHtml(pkg) + '<span class="ver">@' + escapeHtml(version) + '</span></span>' +
       '<span class="pkg-meta">Completed' + escapeHtml(elapsedText) + '</span>' +
+      errorHtml +
     '</div>' +
     '<span class="pkg-badge ' + badgeClass + '">' + badgeText + '</span>';
 
@@ -1000,10 +1043,11 @@ function startJob() {
   addProgress('Submitting job...', 'info');
 
   var license = document.getElementById('license-select').value;
+  var resume = document.getElementById('resume-check').checked;
   fetch('/api/jobs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ manifest_content: jobManifest, license: license, isolation: 'context' })
+    body: JSON.stringify({ manifest_content: jobManifest, license: license, isolation: 'context', resume: resume })
   }).then(function(r) {
     if (!r.ok) return r.json().catch(function() { return { error: 'unknown' }; }).then(function(err) { throw new Error(err.error || r.statusText); });
     return r.json();
@@ -1021,14 +1065,24 @@ function startJob() {
           if (totalPackages > 0) updateProgressCounter(processedPackages, totalPackages);
           addProgress('Started: ' + d.PackageStarted.name, 'info');
         } else if (d.PhaseDone) {
-          addProgress('  ' + d.PhaseDone.name + ' \u2192 ' + d.PhaseDone.phase, '');
+          var phaseLabel = d.PhaseDone.phase === 'agent_b_started'
+            ? 'Agent B (builder) running — this may take several minutes...'
+            : d.PhaseDone.phase;
+          addProgress('  ' + d.PhaseDone.name + ' \u2192 ' + phaseLabel, d.PhaseDone.phase === 'agent_b_started' ? 'info' : '');
+        } else if (d.AgentIteration) {
+          addProgress('  ' + d.AgentIteration.name + ' \u2192 iteration ' +
+            d.AgentIteration.iteration + '/' + d.AgentIteration.max_iterations +
+            ' \u2014 ' + d.AgentIteration.detail, 'info');
         } else if (d.PackageDone) {
           var ok = d.PackageDone.success;
           var pkgName = d.PackageDone.name;
+          var pkgError = d.PackageDone.error || null;
           var elapsed = null;
           if (packageStartTimes[pkgName]) elapsed = ((Date.now() - packageStartTimes[pkgName]) / 1000).toFixed(1);
-          addProgress((ok ? 'OK' : 'FAIL') + ' ' + pkgName + (elapsed ? ' (' + elapsed + 's)' : ''), ok ? 'ok' : 'fail');
-          addResultCard(pkgName, 'latest', ok, elapsed);
+          var progressMsg = (ok ? 'OK' : 'FAIL') + ' ' + pkgName + (elapsed ? ' (' + elapsed + 's)' : '');
+          if (pkgError) progressMsg += ' — ' + pkgError;
+          addProgress(progressMsg, ok ? 'ok' : 'fail');
+          addResultCard(pkgName, 'latest', ok, elapsed, pkgError);
         } else if (d.JobDone != null) {
           var total = d.JobDone.total;
           var failed = d.JobDone.failed;
@@ -1041,9 +1095,14 @@ function startJob() {
           var failHtml = failed > 0
             ? '<span style="color:var(--accent)">' + escapeHtml(String(failed)) + ' failed</span>'
             : '<span style="color:var(--green)">0 failed</span>';
+          var downloadBtn = (failed < total)
+            ? '<a href="/api/jobs/' + escapeHtml(currentJobId) + '/download" class="btn btn-success" style="text-decoration:none;">Download Output (.zip)</a>'
+            : '';
+          var pathRow = '<div class="output-path-row"><code id="output-path-text">' + escapeHtml(outputDir) + '</code>' +
+            '<button class="copy-btn" onclick="var t=document.getElementById(\'output-path-text\').textContent;navigator.clipboard.writeText(t).then(function(){this.textContent=\'Copied!\';var b=this;setTimeout(function(){b.textContent=\'Copy\'},1500)}.bind(this))">Copy</button></div>';
           summary.innerHTML =
             '<div class="summary-text">' + escapeHtml(String(total)) + ' packages processed, ' + failHtml + '</div>' +
-            '<a href="/api/jobs/' + escapeHtml(currentJobId) + '/download" class="btn btn-success" style="text-decoration:none;">Download Output (.zip)</a>';
+            downloadBtn + pathRow;
           resultsDiv.insertBefore(summary, resultsDiv.firstChild);
 
           setStatus('Idle — job completed.', 'ok');

@@ -12,22 +12,24 @@ use std::time::Duration;
 use anyhow::{bail, Context};
 use tracing::{info, warn};
 
+use tokio::sync::broadcast;
+
 use symbi_runtime::reasoning::circuit_breaker::CircuitBreakerRegistry;
 use symbi_runtime::reasoning::context_manager::DefaultContextManager;
 use symbi_runtime::reasoning::conversation::{Conversation, ConversationMessage};
 use symbi_runtime::reasoning::executor::ActionExecutor;
-use symbi_runtime::reasoning::loop_types::{
-    BufferedJournal, LoopConfig, RecoveryStrategy, TerminationReason,
-};
+use symbi_runtime::reasoning::loop_types::{LoopConfig, RecoveryStrategy, TerminationReason};
 use symbi_runtime::reasoning::policy_bridge::DefaultPolicyGate;
 use symbi_runtime::reasoning::reasoning_loop::ReasoningLoopRunner;
 use symbi_runtime::types::AgentId;
 
 use crate::agents::agent_b_executor::AgentBExecutor;
 use crate::agents::builder;
+use crate::agents::progress_journal::ProgressJournalWriter;
 use crate::agents::provider::{LlmProvider, ProviderKind};
 use crate::agents::symbiont_provider::PhalusInferenceProvider;
 use crate::config::PhalusConfig;
+use crate::pipeline::ProgressEvent;
 use crate::{CspSpec, Implementation, TargetLanguage};
 
 /// Run Agent B's agentic code-generation loop using symbi-runtime.
@@ -40,6 +42,7 @@ pub async fn run_agent_b_loop(
     target_lang: &TargetLanguage,
     config: &PhalusConfig,
     output_dir: &Path,
+    progress_tx: Option<broadcast::Sender<ProgressEvent>>,
 ) -> anyhow::Result<Implementation> {
     // 1. Validate API key
     if config.llm.agent_b_api_key.is_empty() {
@@ -81,14 +84,20 @@ pub async fn run_agent_b_loop(
     // 6. Get tool definitions before moving executor into runner
     let tool_defs = executor.tool_definitions();
 
-    // 7. Build the reasoning loop runner
+    // 7. Build the reasoning loop runner with progress journal
+    let max_iterations: u32 = 10;
+    let journal = Arc::new(ProgressJournalWriter::new(
+        csp.package_name.clone(),
+        max_iterations,
+        progress_tx,
+    ));
     let runner = ReasoningLoopRunner::builder()
         .provider(provider as Arc<dyn symbi_runtime::reasoning::inference::InferenceProvider>)
         .executor(executor as Arc<dyn ActionExecutor>)
         .policy_gate(Arc::new(DefaultPolicyGate::permissive()) as _)
         .context_manager(Arc::new(DefaultContextManager::default()) as _)
         .circuit_breakers(Arc::new(CircuitBreakerRegistry::default()))
-        .journal(Arc::new(BufferedJournal::new(256)) as _)
+        .journal(journal as _)
         .build();
 
     // 8. Build conversation
@@ -115,7 +124,7 @@ pub async fn run_agent_b_loop(
 
     // 9. Configure loop
     let loop_config = LoopConfig {
-        max_iterations: 10,
+        max_iterations,
         max_total_tokens: config.llm.agent_b_max_tokens * 10,
         timeout: Duration::from_secs(config.llm.retry.timeout_secs * 10),
         tool_timeout: Duration::from_secs(30),
