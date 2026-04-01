@@ -30,6 +30,22 @@ struct CrateInfo {
     homepage: Option<String>,
 }
 
+/// Response from the crate listing endpoint (used for version resolution).
+#[derive(Debug, Deserialize)]
+struct CrateListResponse {
+    versions: Vec<CrateListVersion>,
+    #[serde(rename = "crate")]
+    krate: CrateInfo,
+}
+
+#[derive(Debug, Deserialize)]
+struct CrateListVersion {
+    num: String,
+    license: Option<String>,
+    crate_size: Option<u64>,
+    yanked: bool,
+}
+
 // ---------------------------------------------------------------------------
 // CratesResolver
 // ---------------------------------------------------------------------------
@@ -70,13 +86,21 @@ impl CratesResolver {
             .trim_start_matches('=')
             .trim();
 
+        // crates.io requires full semver (x.y.z). If we only have a partial
+        // version like "1" or "1.0", resolve the latest matching version.
+        let version_parts: Vec<&str> = clean_version.split('.').collect();
+        if version_parts.len() < 3 || clean_version == "*" {
+            return self
+                .resolve_latest_matching(name, clean_version, version)
+                .await;
+        }
+
         let url = format!("{}/api/v1/crates/{}/{}", self.base_url, name, clean_version);
 
         let response = self
             .client
             .get(&url)
-            // crates.io requires a User-Agent header.
-            .header("User-Agent", "phalus/0.1.0")
+            .header("User-Agent", "phalus/0.5.0")
             .send()
             .await?;
 
@@ -108,6 +132,69 @@ impl CratesResolver {
             unpacked_size: pkg.version.crate_size,
             registry_url: url,
         })
+    }
+
+    /// Resolve the latest non-yanked version matching a partial version prefix.
+    async fn resolve_latest_matching(
+        &self,
+        name: &str,
+        prefix: &str,
+        original_version: &str,
+    ) -> Result<PackageMetadata, RegistryError> {
+        let url = format!("{}/api/v1/crates/{}", self.base_url, name);
+
+        let response = self
+            .client
+            .get(&url)
+            .header("User-Agent", "phalus/0.5.0")
+            .send()
+            .await?;
+
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Err(RegistryError::NotFound {
+                name: name.to_string(),
+                version: original_version.to_string(),
+            });
+        }
+
+        if !response.status().is_success() {
+            let err = response.error_for_status().unwrap_err();
+            return Err(RegistryError::Http(err));
+        }
+
+        let listing: CrateListResponse = response
+            .json()
+            .await
+            .map_err(|e| RegistryError::Parse(e.to_string()))?;
+
+        // Find the latest non-yanked version matching the prefix
+        let matched = listing.versions.iter().filter(|v| !v.yanked).find(|v| {
+            if prefix.is_empty() || prefix == "*" {
+                true
+            } else {
+                v.num == prefix
+                    || (v.num.starts_with(prefix)
+                        && v.num.as_bytes().get(prefix.len()) == Some(&b'.'))
+            }
+        });
+
+        match matched {
+            Some(ver) => Ok(PackageMetadata {
+                name: listing.krate.name,
+                version: ver.num.clone(),
+                ecosystem: Ecosystem::Crates,
+                description: listing.krate.description,
+                license: ver.license.clone(),
+                repository_url: listing.krate.repository,
+                homepage_url: listing.krate.homepage,
+                unpacked_size: ver.crate_size,
+                registry_url: format!("{}/api/v1/crates/{}/{}", self.base_url, name, ver.num),
+            }),
+            None => Err(RegistryError::NotFound {
+                name: name.to_string(),
+                version: original_version.to_string(),
+            }),
+        }
     }
 }
 
