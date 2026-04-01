@@ -1,6 +1,6 @@
 # phalus
 
-**Private Headless Automated License Uncoupling System** — a self-hosted tool for AI-powered clean room software reimplementation. Feed it a dependency manifest and it runs a two-phase, isolation-enforced LLM pipeline: Agent A reads only public documentation and produces a formal specification, Agent B reads only that specification and implements the package from scratch.
+**Private Headless Automated License Uncoupling System** — a self-hosted tool for AI-powered clean room software reimplementation. Feed it a dependency manifest and it runs a two-phase, isolation-enforced LLM pipeline: Agent A reads only public documentation and produces a formal specification, Agent B uses a [symbiont](https://github.com/thirdkeyai/symbiont) reasoning loop to iteratively implement the package from scratch.
 
 No user accounts. No payments. No SaaS. You run it on your own machine with your own API keys.
 
@@ -22,11 +22,11 @@ Pre-built binaries for Linux (x86_64, aarch64), macOS (Apple Silicon), and Windo
 
 ```sh
 # Linux (x86_64)
-curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.6.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.6.1-x86_64-unknown-linux-gnu.tar.gz | tar xz
 sudo mv phalus /usr/local/bin/
 
 # macOS (Apple Silicon)
-curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.6.0-aarch64-apple-darwin.tar.gz | tar xz
+curl -L https://github.com/phalus-sh/phalus/releases/latest/download/phalus-v0.6.1-aarch64-apple-darwin.tar.gz | tar xz
 sudo mv phalus /usr/local/bin/
 ```
 
@@ -99,6 +99,35 @@ Re-validate existing output:
 phalus validate ./phalus-output --similarity-threshold 0.5
 ```
 
+Resume a previous run (skip completed packages):
+
+```sh
+phalus run package.json --resume
+```
+
+## License Scanning
+
+Scan a project's dependencies for license compliance:
+
+```sh
+phalus scan ./my-project
+```
+
+Output:
+```
+Scan: ./my-project (42 packages from 1 manifest, 0 SBOMs)
+
+Package              Version    Ecosystem    License          Class
+lodash               4.17.21    npm          MIT              permissive
+express              4.18.2     npm          MIT              permissive
+serde                1.0.197    crates       MIT OR Apache-2.0  permissive
+numpy                2.2.6      pypi         BSD-3-Clause     permissive
+
+Summary: 38 permissive, 3 copyleft-weak, 1 copyleft-strong
+```
+
+Supports npm, PyPI, crates.io, and Go registries. Handles CycloneDX and SPDX SBOM formats. Compound licenses (`MIT OR Apache-2.0`, `Apache-2.0 AND ISC`) are classified by their most relevant component.
+
 ## Supported Ecosystems
 
 | Ecosystem | Manifest | Registry |
@@ -117,7 +146,7 @@ Manifest → Registry Resolver → Doc Fetcher → Agent A (Analyzer)
 
 1. **Agent A** reads only public documentation (README, API docs, type definitions) and produces a Clean Room Specification Pack (CSP) — 10 documents describing what the package does, never how.
 2. The **Isolation Firewall** enforces separation: Agent B never sees the original documentation or source code. Only the CSP crosses the boundary, logged with SHA-256 checksums.
-3. **Agent B** reads only the CSP and implements the package from scratch under your chosen license.
+3. **Agent B** uses a [symbiont](https://github.com/thirdkeyai/symbiont) ORGA reasoning loop (Observe-Reason-Gate-Act) to iteratively implement the package. It writes files, checks API surface completeness, resolves missing imports, and repeats until the implementation is complete.
 4. The **Validator** checks syntax, runs tests, scores similarity against the original, and flags anything above threshold.
 
 Every step is recorded in an append-only audit trail.
@@ -136,11 +165,13 @@ agent_b_provider = "anthropic"
 agent_b_model = "claude-sonnet-4-6"
 agent_b_api_key = ""
 agent_b_base_url = ""
+agent_a_max_tokens = 16384       # max output tokens for Agent A
+agent_b_max_tokens = 65536       # max output tokens for Agent B
 
 [llm.retry]
 max_retries = 3
 initial_backoff_ms = 500
-timeout_secs = 120
+timeout_secs = 600
 
 [isolation]
 mode = "context"    # context | process | container
