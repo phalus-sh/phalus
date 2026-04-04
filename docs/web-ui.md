@@ -242,7 +242,7 @@ Return the CSP manifest JSON for a completed package. The `name` is the package 
   "generated_at": "2026-03-26T10:00:03Z",
   "documents": [
     {
-      "filename": "01-overview.md",
+      "filename": "01-overview.json",
       "content": "# lodash\n...",
       "content_hash": "a3f2..."
     },

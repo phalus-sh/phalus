@@ -46,19 +46,19 @@ phalus-output/
     └── .cleanroom/
         └── csp/
             ├── manifest.json           # Machine-readable CSP manifest
-            ├── 01-overview.md          # Package purpose and scope
+            ├── 01-overview.json         # Package purpose and scope
             ├── 02-api-surface.json     # Complete public API signatures
-            ├── 03-behavior-spec.md     # Behavioural specification per function
-            ├── 04-edge-cases.md        # Edge cases and error conditions
-            ├── 05-configuration.md     # Options and defaults
-            ├── 06-type-definitions.d.ts # TypeScript-style type definitions
-            ├── 07-error-catalog.md     # Error types and codes
-            ├── 08-compatibility-notes.md # Platform compatibility
-            ├── 09-test-scenarios.md    # Black-box test cases
+            ├── 03-behavior-spec.json   # Behavioural specification per function
+            ├── 04-edge-cases.json      # Edge cases and error conditions
+            ├── 05-configuration.json   # Options and defaults
+            ├── 06-type-definitions.json # TypeScript-style type definitions
+            ├── 07-error-catalog.json   # Error types and codes
+            ├── 08-compatibility-notes.json # Platform compatibility
+            ├── 09-test-scenarios.json  # Black-box test cases
             └── 10-metadata.json        # Package metadata and timestamp
 ```
 
-The `manifest.json` file is the machine-readable index used by `phalus build`. The individual `.md` and `.json` files are the human-readable specification documents.
+The `manifest.json` file is the machine-readable index used by `phalus build`. The individual `.json` files are the human-readable specification documents.
 
 ### Inspect the generated CSP
 
@@ -125,11 +125,11 @@ The split pipeline (`--dry-run` then `build`) allows you to inspect, edit, or pr
 phalus run-one npm/express@4.18.2 --dry-run
 
 # Step 2: Review the specification
-cat ./phalus-output/express/.cleanroom/csp/03-behavior-spec.md
-cat ./phalus-output/express/.cleanroom/csp/04-edge-cases.md
+cat ./phalus-output/express/.cleanroom/csp/03-behavior-spec.json
+cat ./phalus-output/express/.cleanroom/csp/04-edge-cases.json
 
 # Step 3: Edit with any text editor
-$EDITOR ./phalus-output/express/.cleanroom/csp/03-behavior-spec.md
+$EDITOR ./phalus-output/express/.cleanroom/csp/03-behavior-spec.json
 
 # Step 4: Build from the modified CSP
 phalus build ./phalus-output/express/.cleanroom/csp/
@@ -143,10 +143,10 @@ To add security requirements before Agent B begins implementation, edit the rele
 
 | Document | What to add |
 |----------|-------------|
-| `03-behavior-spec.md` | Input validation rules, sanitization requirements, authentication/authorization behaviour |
-| `04-edge-cases.md` | Security-relevant edge cases (e.g. path traversal, injection attacks, overflow handling) |
-| `07-error-catalog.md` | Security error types (e.g. `AuthenticationError`, `PermissionDenied`) |
-| `09-test-scenarios.md` | Security-focused test cases (e.g. XSS payloads, SQL injection strings) |
+| `03-behavior-spec.json` | Input validation rules, sanitization requirements, authentication/authorization behaviour |
+| `04-edge-cases.json` | Security-relevant edge cases (e.g. path traversal, injection attacks, overflow handling) |
+| `07-error-catalog.json` | Security error types (e.g. `AuthenticationError`, `PermissionDenied`) |
+| `09-test-scenarios.json` | Security-focused test cases (e.g. XSS payloads, SQL injection strings) |
 
 **Example: Adding input validation to the behaviour spec**
 
@@ -155,7 +155,7 @@ To add security requirements before Agent B begins implementation, edit the rele
 phalus run-one npm/my-parser@2.0.0 --dry-run
 
 # Append security constraints to the behaviour spec
-cat >> ./phalus-output/my-parser/.cleanroom/csp/03-behavior-spec.md << 'EOF'
+cat >> ./phalus-output/my-parser/.cleanroom/csp/03-behavior-spec.json << 'EOF'
 
 ## Security Constraints
 
@@ -186,12 +186,12 @@ The CSP `manifest.json` is a standard JSON file. You can parse and modify it wit
   "generated_at": "2026-03-27T10:00:03Z",
   "documents": [
     {
-      "filename": "01-overview.md",
+      "filename": "01-overview.json",
       "content": "# lodash\n\nA modern JavaScript utility library...",
       "content_hash": "a3f2c1d4..."
     },
     {
-      "filename": "03-behavior-spec.md",
+      "filename": "03-behavior-spec.json",
       "content": "...",
       "content_hash": "b5c6d7e8..."
     }
@@ -207,8 +207,8 @@ phalus run-one npm/lodash@4.17.21 --dry-run
 
 CSP_DIR="./phalus-output/lodash/.cleanroom/csp"
 
-# Append security constraints to 03-behavior-spec.md via jq
-jq '(.documents[] | select(.filename == "03-behavior-spec.md") | .content) += "\n\n## Security\nAll functions must validate input types at runtime.\n"' \
+# Append security constraints to 03-behavior-spec.json via jq
+jq '(.documents[] | select(.filename == "03-behavior-spec.json") | .content) += "\n\n## Security\nAll functions must validate input types at runtime.\n"' \
   "$CSP_DIR/manifest.json" > "$CSP_DIR/manifest.json.tmp" \
   && mv "$CSP_DIR/manifest.json.tmp" "$CSP_DIR/manifest.json"
 
@@ -243,13 +243,13 @@ security_constraints = """
 
 # Inject into the behaviour spec
 for doc in csp["documents"]:
-    if doc["filename"] == "03-behavior-spec.md":
+    if doc["filename"] == "03-behavior-spec.json":
         doc["content"] += security_constraints
         break
 
 # Add security-focused test scenarios
 for doc in csp["documents"]:
-    if doc["filename"] == "09-test-scenarios.md":
+    if doc["filename"] == "09-test-scenarios.json":
         doc["content"] += """
 
 ## Security Tests (Injected)
@@ -288,10 +288,10 @@ phalus run-one npm/express@4.18.2 --dry-run --output ./cleanroom/
 phalus inspect ./cleanroom/ --csp
 
 # 3. Review the specification
-cat ./cleanroom/express/.cleanroom/csp/03-behavior-spec.md
+cat ./cleanroom/express/.cleanroom/csp/03-behavior-spec.json
 
 # 4. Inject custom security constraints
-cat >> ./cleanroom/express/.cleanroom/csp/04-edge-cases.md << 'EOF'
+cat >> ./cleanroom/express/.cleanroom/csp/04-edge-cases.json << 'EOF'
 
 ## Custom: Request Size Limits
 - Requests with bodies exceeding `max_body_size` (default 1 MB) MUST be rejected with HTTP 413.

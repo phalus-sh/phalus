@@ -236,7 +236,7 @@ phalus build ./phalus-output/express/.cleanroom/csp/ --license mit
 The `build` command enables a split pipeline where Agent A and Agent B run as separate steps. This is useful for:
 
 - **Reviewing the CSP** before committing to implementation
-- **Injecting custom constraints** into the specification (e.g. security requirements in `03-behavior-spec.md` or `04-edge-cases.md`)
+- **Injecting custom constraints** into the specification (e.g. security requirements in `03-behavior-spec.json` or `04-edge-cases.json`)
 - **Reusing a CSP** to generate implementations in multiple languages
 - **Iterating on the implementation** without re-running analysis
 

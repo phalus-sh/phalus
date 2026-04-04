@@ -309,7 +309,7 @@ Return the CSP specification manifest for a package that has completed processin
   "generated_at": "2026-03-26T10:00:03Z",
   "documents": [
     {
-      "filename": "01-overview.md",
+      "filename": "01-overview.json",
       "content": "# lodash\n\nA modern JavaScript utility library...",
       "content_hash": "a3f2c1d4..."
     },
@@ -328,7 +328,7 @@ Return the CSP specification manifest for a package that has completed processin
 | `package_version` | string | Resolved version |
 | `generated_at` | string | RFC 3339 timestamp when Agent A produced the spec |
 | `documents` | array | The ten CSP documents |
-| `documents[].filename` | string | Document filename (e.g. `01-overview.md`) |
+| `documents[].filename` | string | Document filename (e.g. `01-overview.json`) |
 | `documents[].content` | string | Document content |
 | `documents[].content_hash` | string | SHA-256 hex digest of the content |
 
@@ -386,8 +386,8 @@ An array of audit log entries where the event's `package` field contains the giv
     "event": {
       "type": "firewall_crossing",
       "package": "lodash@4.17.21",
-      "documents_transferred": ["01-overview.md", "02-api-surface.json"],
-      "sha256_checksums": {"01-overview.md": "c1d2e3f4..."},
+      "documents_transferred": ["01-overview.json", "02-api-surface.json"],
+      "sha256_checksums": {"01-overview.json": "c1d2e3f4..."},
       "isolation_mode": "context",
       "source_code_accessed": false
     }

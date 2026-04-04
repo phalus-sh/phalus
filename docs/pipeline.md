@@ -99,15 +99,15 @@ Agent A receives only the fetched documentation. It produces a **Clean Room Spec
 
 | # | Filename | Contents |
 |---|----------|----------|
-| 1 | `01-overview.md` | Package purpose, scope, target use cases |
+| 1 | `01-overview.json` | Package purpose, scope, target use cases |
 | 2 | `02-api-surface.json` | Complete public API: function signatures, types, return types |
-| 3 | `03-behavior-spec.md` | Detailed behavioural specification per public function |
-| 4 | `04-edge-cases.md` | Documented edge cases, error conditions, boundary behaviour |
-| 5 | `05-configuration.md` | Options, defaults, environment variables |
-| 6 | `06-type-definitions.d.ts` | TypeScript-style type definitions for the public API |
-| 7 | `07-error-catalog.md` | Error types, messages, codes |
-| 8 | `08-compatibility-notes.md` | Platform requirements, runtime compatibility, version notes |
-| 9 | `09-test-scenarios.md` | Black-box test cases derived from documentation |
+| 3 | `03-behavior-spec.json` | Detailed behavioural specification per public function |
+| 4 | `04-edge-cases.json` | Documented edge cases, error conditions, boundary behaviour |
+| 5 | `05-configuration.json` | Options, defaults, environment variables |
+| 6 | `06-type-definitions.json` | TypeScript-style type definitions for the public API |
+| 7 | `07-error-catalog.json` | Error types, messages, codes |
+| 8 | `08-compatibility-notes.json` | Platform requirements, runtime compatibility, version notes |
+| 9 | `09-test-scenarios.json` | Black-box test cases derived from documentation |
 | 10 | `10-metadata.json` | Original package name, version, license, analysis timestamp |
 
 Agent A's system prompt instructs it to describe *what* functions do, not *how* they work internally. It must not copy inline code examples from the documentation.
@@ -180,7 +180,7 @@ After Agent B writes the output files, the validator runs a suite of checks:
 | Check | What it verifies |
 |-------|-----------------|
 | Syntax | Generated code parses without errors for the target language |
-| Tests | Generated tests (from CSP `09-test-scenarios.md`) are executed; pass/fail counts recorded |
+| Tests | Generated tests (from CSP `09-test-scenarios.json`) are executed; pass/fail counts recorded |
 | API surface | All exports listed in `02-api-surface.json` are present in the generated code |
 | License | Correct license header present on all source files; `LICENSE` file present |
 | Similarity | Token similarity, function-name overlap, and string overlap against the original source are computed |
@@ -221,13 +221,13 @@ This split is useful for:
 phalus run-one npm/lodash@4.17.21 --dry-run
 
 # (optional) Modify the CSP
-$EDITOR ./phalus-output/lodash/.cleanroom/csp/03-behavior-spec.md
+$EDITOR ./phalus-output/lodash/.cleanroom/csp/03-behavior-spec.json
 
 # Stage 6: Build from CSP
 phalus build ./phalus-output/lodash/.cleanroom/csp/
 ```
 
-The CSP is a set of plain-text files (Markdown, JSON, TypeScript definitions) stored at `<output>/<package>/.cleanroom/csp/`. The `manifest.json` file in that directory is the machine-readable index that `phalus build` reads. You can modify either the individual files or the `manifest.json` directly.
+The CSP is a set of JSON files stored at `<output>/<package>/.cleanroom/csp/`. The `manifest.json` file in that directory is the machine-readable index that `phalus build` reads. You can modify either the individual files or the `manifest.json` directly.
 
 See the [Cookbook](cookbook.md) for detailed examples including programmatic CSP modification with `jq` and Python.
 

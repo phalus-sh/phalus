@@ -138,15 +138,15 @@ phalus inspect ./phalus-output --csp --similarity --audit
 ```
 === CSP Specs ===
   left-pad@1.1.3 (10 documents)
-    - 01-overview.md
+    - 01-overview.json
     - 02-api-surface.json
-    - 03-behavior-spec.md
-    - 04-edge-cases.md
-    - 05-configuration.md
-    - 06-type-definitions.d.ts
-    - 07-error-catalog.md
-    - 08-compatibility-notes.md
-    - 09-test-scenarios.md
+    - 03-behavior-spec.json
+    - 04-edge-cases.json
+    - 05-configuration.json
+    - 06-type-definitions.json
+    - 07-error-catalog.json
+    - 08-compatibility-notes.json
+    - 09-test-scenarios.json
     - 10-metadata.json
 ```
 
@@ -205,7 +205,7 @@ phalus-output/
 │   ├── validation.json          # similarity + verdict
 │   └── .cleanroom/
 │       └── csp/
-│           ├── 01-overview.md
+│           ├── 01-overview.json
 │           ├── 02-api-surface.json
 │           └── ...
 └── audit.jsonl                  # job-level audit trail
@@ -223,7 +223,7 @@ phalus run-one npm/lodash@4.17.21 --dry-run
 
 # Step 2: Review the specification
 phalus inspect ./phalus-output --csp
-cat ./phalus-output/lodash/.cleanroom/csp/03-behavior-spec.md
+cat ./phalus-output/lodash/.cleanroom/csp/03-behavior-spec.json
 
 # Step 3: Build from the CSP (Agent B)
 phalus build ./phalus-output/lodash/.cleanroom/csp/

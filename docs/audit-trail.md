@@ -101,9 +101,9 @@ Emitted after Agent A produces the CSP specification. Records a content hash for
     "type": "spec_generated",
     "package": "lodash@4.17.21",
     "document_hashes": {
-      "01-overview.md": "c1d2e3f4...",
+      "01-overview.json": "c1d2e3f4...",
       "02-api-surface.json": "a5b6c7d8...",
-      "03-behavior-spec.md": "e9f0a1b2..."
+      "03-behavior-spec.json": "e9f0a1b2..."
     },
     "model": "claude-sonnet-4-6",
     "prompt_hash": "f3a4b5c6...",
@@ -133,7 +133,7 @@ Emitted instead of `spec_generated` when a cached CSP is used because the packag
     "type": "spec_cache_hit",
     "package": "lodash@4.17.21",
     "spec_hashes": {
-      "01-overview.md": "c1d2e3f4...",
+      "01-overview.json": "c1d2e3f4...",
       "02-api-surface.json": "a5b6c7d8..."
     }
   }
@@ -154,19 +154,19 @@ Emitted when the CSP documents are handed from Agent A to Agent B. This is the c
     "type": "firewall_crossing",
     "package": "lodash@4.17.21",
     "documents_transferred": [
-      "01-overview.md",
+      "01-overview.json",
       "02-api-surface.json",
-      "03-behavior-spec.md",
-      "04-edge-cases.md",
-      "05-configuration.md",
-      "06-type-definitions.d.ts",
-      "07-error-catalog.md",
-      "08-compatibility-notes.md",
-      "09-test-scenarios.md",
+      "03-behavior-spec.json",
+      "04-edge-cases.json",
+      "05-configuration.json",
+      "06-type-definitions.json",
+      "07-error-catalog.json",
+      "08-compatibility-notes.json",
+      "09-test-scenarios.json",
       "10-metadata.json"
     ],
     "sha256_checksums": {
-      "01-overview.md": "c1d2e3f4...",
+      "01-overview.json": "c1d2e3f4...",
       "02-api-surface.json": "a5b6c7d8..."
     },
     "isolation_mode": "context",
