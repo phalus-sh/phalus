@@ -10,29 +10,233 @@ Your task: produce a complete, implementation-neutral specification
 that another developer (who also has never seen the source code)
 could use to build a functionally equivalent package from scratch.
 
-Focus on:
-- Public API surface (function signatures, classes, methods)
-- Input/output behavior for each public function
-- Edge cases documented in the README or API docs
-- Configuration options and defaults
-- Error handling behavior (documented error types/messages)
-- Any documented performance characteristics
-
 Do NOT include:
 - Guesses about internal implementation
 - Algorithm details not present in documentation
 - Any code copied from examples (describe behavior in prose)
 
-Output your specification as a JSON object with exactly these 10 documents:
+When analyzing documentation, pay special attention to these categories
+that are critical for reimplementation but often underdocumented. Include
+them in the relevant specification documents when the documentation
+describes such behavior. If documentation does not describe a behavior
+in these categories, omit the field entirely. Do NOT guess.
+
+- MERGE/RESOLUTION ALGORITHMS: If the package merges configs, options,
+  or combines values (URLs, paths, headers), specify exact rules: which
+  keys are deep-merged vs shallow-replaced, how conflicts resolve, how
+  per-method or per-request overrides layer onto defaults.
+
+- TYPE-DETECTION CASCADES: If functions behave differently based on input
+  type (Buffer, Stream, string, FormData, Blob, ArrayBuffer, URLSearchParams,
+  plain object, etc.), document the full detection order and the behavior
+  for each type.
+
+- SERIALIZATION SEMANTICS: For any serialize/deserialize function, specify:
+  recursive traversal rules, key naming convention (a[b][c] vs a.b.c),
+  depth limits, special type handling (Date, Blob, File within nested
+  structures), and visitor/hook return value semantics (does false skip?
+  does true continue?).
+
+- INTERFACE CONTRACTS: For extension points (adapters, plugins, middleware,
+  transforms), specify what the function receives as arguments and what it
+  must return. Someone writing a custom adapter or reimplementing built-in
+  ones needs this contract.
+
+- DEFAULT BEHAVIORS: For any function with configurable defaults
+  (serializers, parsers, transforms), specify exactly what the default
+  implementation does with each input type, not just "uses defaults."
+
+- SECURITY MECHANISMS: If the package has auth, CSRF/XSRF, token handling,
+  or credential management, specify the full flow: when tokens/cookies are
+  read, from where, under what conditions, how they interact with other
+  configuration options (e.g. withCredentials, same-origin policies).
+
+- ENUM VALUES: If the package exports enums or constant maps, enumerate
+  every key/value pair. Do not just note that the enum exists.
+
+- SENTINEL VALUES: Document values that have special meaning beyond their
+  literal type (e.g. false disables a feature, null resets to default,
+  undefined means inherit from parent config).
+
+Output your specification as a JSON object with exactly these 10 keys.
+Each value MUST be a valid JSON object (not a string) conforming to the
+schema described below.
+
+"01-overview":
 {
-  "01-overview": "Package purpose, scope, target use cases",
-  "02-api-surface": "Complete public API as JSON: function signatures, types, return types",
-  "03-behavior-spec": "Detailed behavioral specification per public function",
-  "04-edge-cases": "Documented edge cases, error conditions, boundary behavior",
-  "05-configuration": "Options, defaults, environment variables",
-  "06-type-definitions": "TypeScript-style type definitions for the public API",
-  "07-error-catalog": "Error types, messages, codes",
-  "08-compatibility-notes": "Platform requirements, browser/Node compat, version notes",
-  "09-test-scenarios": "Black-box test cases derived from documentation",
-  "10-metadata": "Original package name, version, license, size, analysis timestamp"
+  "name": string,
+  "version": string,
+  "purpose": string (what the package does and why it exists),
+  "scope": string (what it covers and what it does not),
+  "target_use_cases": [string],
+  "ecosystem": string
+}
+
+"02-api-surface":
+{
+  "exports": [
+    {
+      "name": string (REQUIRED - the exported identifier),
+      "kind": "function" | "class" | "object" | "constant" | "type" | "enum",
+      "signature": string (full call signature as it appears in docs),
+      "description": string,
+      "parameters": [
+        {
+          "name": string,
+          "type": string,
+          "required": boolean,
+          "default": value | null,
+          "description": string
+        }
+      ],
+      "return_type": string,
+      "static_methods": [same shape as exports entry, for classes/objects],
+      "instance_methods": [same shape as exports entry],
+      "properties": [{"name": string, "type": string, "description": string}]
+    }
+  ]
+}
+Every exported function, class, method, constant, type, and enum MUST
+have its own entry with a "name" field. For classes and objects, nest
+methods under static_methods/instance_methods using the same shape.
+
+"03-behavior-spec":
+Keyed by export name. Include optional sub-objects only when the
+documentation describes such behavior.
+{
+  "<export_name>": {
+    "description": string,
+    "behavior": string (step-by-step what it does),
+    "type_handling": {
+      "<input_type>": string (what happens for this type)
+    } | omit if not applicable,
+    "merge_algorithm": {
+      "deep_merge_keys": [string],
+      "shallow_replace_keys": [string],
+      "conflict_resolution": string,
+      "header_merge_behavior": string
+    } | omit if not applicable,
+    "resolution_rules": {
+      "rule": string (exact concatenation/resolution logic),
+      "absolute_detection": string (what makes a value absolute),
+      "edge_cases": string
+    } | omit if not applicable,
+    "default_behavior": string,
+    "interaction_with": {
+      "<other_export>": string (how they interact)
+    } | omit if not applicable,
+    "sentinel_values": {
+      "<value>": string (special meaning)
+    } | omit if not applicable
+  }
+}
+
+"04-edge-cases":
+Keyed by export name.
+{
+  "<export_name>": [
+    {
+      "condition": string,
+      "input": concrete value or description,
+      "expected_behavior": string,
+      "source": string (where in the documentation this was found)
+    }
+  ]
+}
+
+"05-configuration":
+{
+  "options": [
+    {
+      "name": string,
+      "type": string,
+      "default": value | null,
+      "description": string,
+      "valid_values": [string] | null,
+      "nested_options": [same shape] | null
+    }
+  ],
+  "environment_variables": [
+    {"name": string, "maps_to": string, "description": string}
+  ],
+  "config_merge_behavior": {
+    "deep_merge_keys": [string],
+    "shallow_replace_keys": [string],
+    "per_method_overrides": string
+  } | null
+}
+
+"06-type-definitions":
+{
+  "types": [
+    {
+      "name": string,
+      "kind": "interface" | "type" | "enum" | "class",
+      "fields": [
+        {"name": string, "type": string, "optional": boolean, "description": string}
+      ],
+      "extends": string | null,
+      "generic_parameters": [string]
+    }
+  ],
+  "enums": [
+    {
+      "name": string,
+      "values": [{"key": string, "value": number | string}]
+    }
+  ]
+}
+Enums MUST enumerate every key/value pair, not just note that the enum exists.
+
+"07-error-catalog":
+{
+  "errors": [
+    {
+      "name": string,
+      "code": string | null,
+      "condition": string (when this error occurs),
+      "message_template": string,
+      "properties": [
+        {"name": string, "type": string, "description": string}
+      ],
+      "extends": string | null
+    }
+  ]
+}
+
+"08-compatibility-notes":
+{
+  "platform_requirements": {"node": string, "browser": string},
+  "deprecated_features": [
+    {"name": string, "replacement": string, "since_version": string}
+  ],
+  "breaking_changes": [
+    {"version": string, "description": string}
+  ],
+  "polyfills_required": [string]
+}
+
+"09-test-scenarios":
+Keyed by export name. Each scenario MUST have concrete input/output
+values, not prose descriptions.
+{
+  "<export_name>": [
+    {
+      "description": string,
+      "setup": string | null (any prerequisite state, config, or mocks),
+      "input": concrete value(s),
+      "expected_output": concrete value,
+      "assertion_type": "equals" | "throws" | "contains" | "type_check"
+    }
+  ]
+}
+
+"10-metadata":
+{
+  "original_name": string,
+  "version": string,
+  "license": string,
+  "repository_url": string | null,
+  "homepage_url": string | null,
+  "analyzed_at": ISO 8601 timestamp
 }

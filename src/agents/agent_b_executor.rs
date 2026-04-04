@@ -253,26 +253,60 @@ pub fn check_imports_impl(output_dir: &Path) -> String {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/// Recursively collect all `"name"` string values from a JSON value.
+/// Collect export names from the API surface JSON.
+///
+/// Tries the structured schema first (an `"exports"` array where each entry
+/// has a `"name"` field, with optional `"static_methods"` and `"instance_methods"`
+/// sub-arrays in the same shape). Falls back to the legacy approach of
+/// recursively collecting all `"name"` string values for cached CSPs that
+/// predate the schema change.
 fn collect_names(val: &serde_json::Value) -> Vec<String> {
+    if let Some(exports) = val.get("exports").and_then(|v| v.as_array()) {
+        let mut names = Vec::new();
+        collect_names_from_exports(exports, &mut names);
+        if !names.is_empty() {
+            return names;
+        }
+    }
+    // Fallback: legacy recursive search for any "name" string values.
     let mut names = Vec::new();
+    collect_names_recursive(val, &mut names);
+    names
+}
+
+/// Extract names from the structured exports array, recursing into
+/// static_methods and instance_methods.
+fn collect_names_from_exports(exports: &[serde_json::Value], names: &mut Vec<String>) {
+    for entry in exports {
+        if let Some(name) = entry.get("name").and_then(|v| v.as_str()) {
+            names.push(name.to_string());
+        }
+        for key in &["static_methods", "instance_methods"] {
+            if let Some(methods) = entry.get(*key).and_then(|v| v.as_array()) {
+                collect_names_from_exports(methods, names);
+            }
+        }
+    }
+}
+
+/// Legacy: recursively collect all `"name"` string values from a JSON value.
+fn collect_names_recursive(val: &serde_json::Value, names: &mut Vec<String>) {
     match val {
         serde_json::Value::Object(map) => {
             if let Some(serde_json::Value::String(n)) = map.get("name") {
                 names.push(n.clone());
             }
             for v in map.values() {
-                names.extend(collect_names(v));
+                collect_names_recursive(v, names);
             }
         }
         serde_json::Value::Array(arr) => {
             for v in arr {
-                names.extend(collect_names(v));
+                collect_names_recursive(v, names);
             }
         }
         _ => {}
     }
-    names
 }
 
 /// Collect exported names from .js/.ts files under `dir`.

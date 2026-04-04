@@ -63,13 +63,7 @@ pub fn parse_csp_response(
             None => String::new(),
         };
         let content_hash = format!("{:x}", Sha256::digest(content.as_bytes()));
-        let filename = if *key == "02-api-surface" || *key == "10-metadata" {
-            format!("{}.json", key)
-        } else if *key == "06-type-definitions" {
-            format!("{}.d.ts", key)
-        } else {
-            format!("{}.md", key)
-        };
+        let filename = format!("{key}.json");
         documents.push(CspDocument {
             filename,
             content,
